@@ -1,67 +1,131 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.20;
 
 import {BaseAccount} from "account-abstraction/core/BaseAccount.sol";
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
+import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract Wallet is BaseAccount, Initializable {
     using ECDSA for bytes32;
-    address public immutable walletFactory;
+    using MessageHashUtils for bytes32;
+
+    // Events
+    event WalletInitialized(IEntryPoint indexed entryPoint, address owner, address guardian, uint256 maxAmountAllowed);
+    event TwoFactorAuthRequired(uint256 indexed pausedNonce);
+
+    // Errors
+    error NotEntrypointOrFactory();
+    error InvalidPausedTransactionNonce();
+    error GuardianSignatureVerificationFailed();
+
+    // Structs
+    struct Transaction {
+        address target;
+        uint256 value;
+        bytes data;
+    }
+
+    // Storage
+    address private immutable _walletFactory;
     IEntryPoint private immutable _entryPoint;
     // Function selector for "transfer(address,uint256)"
     bytes4 private constant TRANSFER_SELECTOR = 0xa9059cbb;
+
+    uint256 lastUsedPausedNonce;
+    uint256 maxTransferAllowedWithoutAuthUSD;
     address public owner;
+    address public guardian;
 
-    event WalletInitialized(IEntryPoint indexed entryPoint, address owner);
-    event TwoFactorInitiated(address indexed dest, uint256 value, bytes func);
+    mapping(uint256 nonce => Transaction txn) public pausedTransactions;
 
+    // Modifiers
     modifier _requireFromEntryPointOrFactory() {
-        require(
-            msg.sender == address(_entryPoint) || msg.sender == walletFactory,
-            "only entry point or wallet factory can call"
-        );
+        if (msg.sender != address(_entryPoint) && msg.sender != _walletFactory) revert NotEntrypointOrFactory();
+        _;
     }
 
     constructor(IEntryPoint anEntryPoint, address ourWalletFactory) {
         _entryPoint = anEntryPoint;
-        walletFactory = ourWalletFactory;
+        _walletFactory = ourWalletFactory;
     }
 
-    function initialize(address memory initialOwner) public initializer {
-        _initialize(initialOwner);
+    function initialize(address _owner, address _guardian, uint256 _maxAmountAllowed) public initializer {
+        owner = _owner;
+        guardian = _guardian;
+        maxTransferAllowedWithoutAuthUSD = _maxAmountAllowed;
+        emit WalletInitialized(_entryPoint, _owner, _guardian, _maxAmountAllowed);
     }
 
-    function _initialize(address initialOnwer) internal {
-        owner = initialOnwer;
-        emit WalletInitialized(_entryPoint, owner);
+    function execute(address target, uint256 value, bytes calldata data) external _requireFromEntryPointOrFactory {
+        bool is2FARequired = _twoFactorRequired(target, value, data);
+
+        if (!is2FARequired) {
+            _call(target, value, data);
+        }
     }
 
-    function _validateSignature(
-        UserOperation calldata userOp,
-        bytes32 userOpHash
-    ) internal view override returns (uint256) {
+    function approveTransaction(uint256 pausedNonce, bytes calldata approveSignature)
+        public
+        _requireFromEntryPointOrFactory
+    {
+        Transaction memory txn = pausedTransactions[pausedNonce];
+        if (txn.data.length == 0) revert InvalidPausedTransactionNonce();
+        bytes32 txnHash = keccak256(abi.encode(txn)).toEthSignedMessageHash();
+
+        if (guardian != txnHash.recover(approveSignature)) revert GuardianSignatureVerificationFailed();
+
+        _call(txn.target, txn.value, txn.data);
+    }
+
+    function addDeposit() public payable {
+        _entryPoint.depositTo{value: msg.value}(address(this));
+    }
+
+    // Internal Functions
+    function _twoFactorRequired(address target, uint256 value, bytes memory data) internal returns (bool) {
+        bytes4 selector;
+        assembly {
+            selector := mload(add(data, 32))
+        }
+
+        if (selector != TRANSFER_SELECTOR) return false;
+
+        uint256 amount;
+        assembly {
+            // Skip 32 + 4 + 32 (length + func sig + address)
+            amount := mload(add(data, 68))
+        }
+
+        // TODO: call chainlink function to determine the price
+        if (amount < maxTransferAllowedWithoutAuthUSD) {
+            return false;
+        }
+
+        pausedTransactions[lastUsedPausedNonce] = Transaction({data: data, value: value, target: target});
+        emit TwoFactorAuthRequired(lastUsedPausedNonce);
+        unchecked {
+            lastUsedPausedNonce++;
+        }
+        return true;
+    }
+
+    function _validateSignature(PackedUserOperation calldata userOp, bytes32 userOpHash)
+        internal
+        view
+        override
+        returns (uint256)
+    {
         bytes32 hash = userOpHash.toEthSignedMessageHash();
-        bytes memory signature = abi.decode(userOp.signature, bytes);
+        bytes memory signature = abi.decode(userOp.signature, (bytes));
 
-        if (owner != hash.recover(signature)) {
-            return SIG_VALIDATION_FAILED;
+        if (owner == hash.recover(signature)) {
+            return 0;
         }
 
-        return 0;
-    }
-
-    function execute(
-        address dest,
-        uint256 value,
-        bytes calldata func
-    ) external _requireFromEntryPointOrFactory {
-        if (!twoFactorRequired()) {
-            _call(dest, value, func);
-        } else {
-            emit TwoFactorInitiated(dest, value, func);
-        }
+        return 1;
     }
 
     function _call(address target, uint256 value, bytes memory data) internal {
@@ -73,23 +137,12 @@ contract Wallet is BaseAccount, Initializable {
         }
     }
 
-    function twoFactorRequired() internal returns (bool) {
-        bytes4 selector;
-        assembly {
-            selector :=
-        }
-        return false;
-    }
-
+    // View Private Variables
     function entryPoint() public view override returns (IEntryPoint) {
         return _entryPoint;
     }
 
-    function addDeposit() public payable {
-        entryPoint().depositTo{value: msg.value}(address(this));
+    function walletFactory() public view returns (address) {
+        return _walletFactory;
     }
-
-    function _authoriseUpgrade(
-        address
-    ) internal view override _requireFromEntryPointOrFactory {}
 }
