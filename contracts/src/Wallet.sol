@@ -7,6 +7,7 @@ import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOper
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {console2} from "forge-std/console2.sol";
 
 contract Wallet is BaseAccount, Initializable {
     using ECDSA for bytes32;
@@ -118,10 +119,9 @@ contract Wallet is BaseAccount, Initializable {
         override
         returns (uint256)
     {
-        bytes32 hash = userOpHash.toEthSignedMessageHash();
-        bytes memory signature = abi.decode(userOp.signature, (bytes));
+        // bytes32 hash = userOpHash.toEthSignedMessageHash();
 
-        if (owner == hash.recover(signature)) {
+        if (owner == userOpHash.recover(userOp.signature)) {
             return 0;
         }
 

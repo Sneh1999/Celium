@@ -1,52 +1,98 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "forge-std/Test.sol";
 import {Script, console2} from "forge-std/Script.sol";
-import "../src/WalletFactory.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
+import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 
-import "../src/Wallet.sol";
+import {Wallet} from "../src/Wallet.sol";
+import {WalletFactory} from "../src/WalletFactory.sol";
+
+import "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
 
 contract WalletFactoryTest is Test {
-    uint256 testNumber;
+    EntryPoint entryPoint;
     WalletFactory walletFactory;
-    PackedUserOperation userOp;
-    address owner = 0x31f6265B7B2D1e03E2874450AFE4716F0ff3C70a;
-    address guardian = 0xeBa32c7eAdC77e27efe143a4791FACf3d8e4D264;
+    Wallet wallet;
 
-    function setupUserOp() public returns (PackedUserOperation) {
-        bytes4 executeSelector = keccak256("execute(address target, uint256 value, bytes calldata data)");
-        address executeTarget = 0xdb6EAFFa95899B53b27086Bd784F3BBFd58Ff843;
-        uint256 executeValue = 1;
-        bytes data = abi.encodeWithSelector(bytes4, arg);
-        bytes createAccountSelector = walletFactory.createAccount.selector;
-        uint256 salt = 1;
-        bytes createAccountData = abi.encodeWithSelector(createAccountSelector, (owner, guardian, salt, executeValue));
-        bytes initCode = abi.encode(address(walletFactory), createAccountData);
-        userOp = PackedUserOperation({
-            sender: owner,
-            nonce: 0,
+    uint256 internal ownerPrivateKey;
+    uint256 internal guardianPrivateKey;
+
+    address internal owner;
+    address internal guardian;
+
+    // Set up
+    function setUp() public {
+        ownerPrivateKey = 0xa11ce;
+        guardianPrivateKey = 0xabc123;
+        owner = vm.addr(ownerPrivateKey);
+        guardian = vm.addr(guardianPrivateKey);
+
+        entryPoint = new EntryPoint();
+        walletFactory = new WalletFactory(entryPoint);
+
+        // Empty UserOp to deploy the Wallet initially
+        _handleOp(_getUserOp("", ""));
+    }
+
+    // Write actual tests here
+    function test_something() public {
+        assertEq(true, true);
+    }
+
+    // Internals
+    function _getUserOp(bytes memory callData, bytes memory paymasterAndData)
+        internal
+        returns (PackedUserOperation memory)
+    {
+        bytes memory initCode = _getInitCode(10_000);
+        address walletContract = address(wallet);
+        vm.deal(walletContract, 10 ether);
+        entryPoint.depositTo{value: 10 ether}(walletContract);
+
+        PackedUserOperation memory userOp = PackedUserOperation({
+            sender: walletContract,
+            nonce: entryPoint.getNonce(walletContract, 0),
             initCode: initCode,
-            callData: abi.encodeWithSelector(executeSelector, (executeTarget, executeValue, initCode)),
-            accountGasLimits: 180000,
-            gasFees: 1000000000,
-            signature: "0x"
+            callData: callData,
+            accountGasLimits: bytes32(abi.encodePacked(uint128(2_000_000), uint128(2_000_000))),
+            preVerificationGas: 100_000,
+            gasFees: bytes32(abi.encodePacked(uint128(10), uint128(10))),
+            paymasterAndData: paymasterAndData,
+            signature: ""
         });
+
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+
+        vm.startPrank(owner);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, userOpHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+
+        userOp.signature = signature;
         return userOp;
     }
 
-    function setUp() public {
-        address entryPoint = 0x0576a174D229E3cFA37253523E645A78A0C91B57;
-        walletFactory = new WalletFactory(entryPoint);
-        console2.log("WalletFactory Address is:", address(walletFactory));
+    function _getInitCode(uint256 maxAmountAllowedWithoutAuthUSD) internal returns (bytes memory) {
+        uint256 salt = 1;
+
+        bytes4 createAccountSelector = walletFactory.createAccount.selector;
+        bytes memory createAccountData =
+            abi.encodeWithSelector(createAccountSelector, owner, guardian, salt, maxAmountAllowedWithoutAuthUSD);
+
+        bytes memory initCode = abi.encodePacked(address(walletFactory), createAccountData);
+
+        address walletContract = walletFactory.getAddress(owner, guardian, salt, maxAmountAllowedWithoutAuthUSD);
+        wallet = Wallet(payable(walletContract));
+
+        return initCode;
     }
 
-    function test_NumberIs42() public {
-        assertEq(testNumber, 42);
-    }
+    function _handleOp(PackedUserOperation memory userOp) internal {
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
+        ops[0] = userOp;
 
-    function testFail_Subtract43() public {
-        testNumber -= 43;
+        entryPoint.handleOps(ops, payable(owner));
     }
 }
