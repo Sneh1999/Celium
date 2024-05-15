@@ -61,6 +61,7 @@ contract Wallet is BaseAccount, Initializable {
     }
 
     function execute(address target, uint256 value, bytes calldata data) external _requireFromEntryPointOrFactory {
+        console2.log("hello from execute");
         bool is2FARequired = _twoFactorRequired(target, value, data);
 
         if (!is2FARequired) {
@@ -88,6 +89,7 @@ contract Wallet is BaseAccount, Initializable {
     // Internal Functions
     function _twoFactorRequired(address target, uint256 value, bytes memory data) internal returns (bool) {
         bytes4 selector;
+        console2.log("came to two factor");
         assembly {
             selector := mload(add(data, 32))
         }
@@ -104,12 +106,13 @@ contract Wallet is BaseAccount, Initializable {
         if (amount < maxTransferAllowedWithoutAuthUSD) {
             return false;
         }
-
-        pausedTransactions[lastUsedPausedNonce] = Transaction({data: data, value: value, target: target});
+        console2.log("Two factor auth required");
         emit TwoFactorAuthRequired(lastUsedPausedNonce);
         unchecked {
             lastUsedPausedNonce++;
         }
+
+        pausedTransactions[lastUsedPausedNonce] = Transaction({data: data, value: value, target: target});
         return true;
     }
 
@@ -120,7 +123,7 @@ contract Wallet is BaseAccount, Initializable {
         returns (uint256)
     {
         // bytes32 hash = userOpHash.toEthSignedMessageHash();
-
+        console2.log("came to validate signature");
         if (owner == userOpHash.recover(userOp.signature)) {
             return 0;
         }
