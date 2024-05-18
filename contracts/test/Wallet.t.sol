@@ -6,10 +6,8 @@ import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Wallet} from "../src/Wallet.sol";
 import {WalletFactory} from "../src/WalletFactory.sol";
-import {TestERC20} from "../src/TestERC20.sol";
 
 import "forge-std/Test.sol";
-import {console} from "forge-std/console.sol";
 
 struct Transaction {
     address target;
@@ -21,16 +19,38 @@ contract WalletFactoryTest is Test {
     EntryPoint entryPoint;
     WalletFactory walletFactory;
     Wallet wallet;
+    address[] feeds = [
+        0x14866185B1962B63C3Ea9E03Bc1da838bab34C19,
+        0x635A86F9fdD16Ff09A0701C305D3a845F1758b8E,
+        0xc59E3633BAAC79493d908e63626716e204A45EdF,
+        0xc0F82A46033b8BdBA4Bb0B0e28Bc2006F64355bC,
+        0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E
+    ];
+
+    address[] tokens = [
+        0x68194a729C2450ad26072b3D33ADaCbcef39D574,
+        // GHO
+        0x5d00fab5f2F97C4D682C1053cDCAA59c2c37900D,
+        // LINK
+        0x779877A7B0D9E8603169DdbD7836e478b4624789,
+        // SNX
+        0x236f697c518b7AEc0bb227d8B7547b3c27cA29bc,
+        // USDC
+        0xf08A50178dfcDe18524640EA6618a1f965821715
+    ];
 
     address createdWalletAddress;
     address internal owner;
-    ERC20 internal testToken;
+    address internal usdcWhale = 0x406C90A36c66A42Cb4699d4Dc46DF7af5dDEe199;
+    ERC20 usdc = ERC20(0xf08A50178dfcDe18524640EA6618a1f965821715);
     address internal guardian;
     uint256 ownerPrivateKey = 0xa11ce;
     uint256 guardianPrivateKey = 0xabc123;
     // Set up
 
     function setUp() public {
+        uint256 forkId = vm.createFork("https://rpc.ankr.com/eth_sepolia");
+        vm.selectFork(forkId);
         owner = vm.addr(ownerPrivateKey);
         guardian = vm.addr(guardianPrivateKey);
 
@@ -43,17 +63,16 @@ contract WalletFactoryTest is Test {
         _handleOp(userOp);
 
         // Create a test token and mint some to the owner
-        vm.startPrank(owner);
-        testToken = new TestERC20(1_000_000 ether);
-        testToken.transfer(createdWalletAddress, 1_000_000 ether);
+        vm.startPrank(usdcWhale);
+        usdc.transfer(createdWalletAddress, 2_000e6);
         vm.stopPrank();
     }
 
     // Write actual tests here
-    function test_approve_transaction_works() public {
-        bytes memory transferCalldata = abi.encodeWithSelector(ERC20.transfer.selector, guardian, 10_001 ether);
+    function test_transfer_work_with_2fa() public {
+        bytes memory transferCalldata = abi.encodeWithSelector(ERC20.transfer.selector, guardian, 3e6);
         bytes memory transactionCalldata =
-            abi.encodeWithSelector(Wallet.execute.selector, address(testToken), uint256(0), transferCalldata);
+            abi.encodeWithSelector(Wallet.execute.selector, address(usdc), uint256(0), transferCalldata);
 
         (PackedUserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
         _handleOp(userOp);
@@ -70,8 +89,19 @@ contract WalletFactoryTest is Test {
 
         (PackedUserOperation memory approveTransactionOp,) = _getUserOp(approveTransactionCalldata, "", false);
         _handleOp(approveTransactionOp);
-        uint256 balance = testToken.balanceOf(guardian);
-        assertEq(balance, uint256(10_001 ether));
+        uint256 balance = usdc.balanceOf(guardian);
+        assertEq(balance, uint256(3e6));
+    }
+
+    function test_transfer_work_without_2fa() public {
+        bytes memory transferCalldata = abi.encodeWithSelector(ERC20.transfer.selector, guardian, 1e6);
+        bytes memory transactionCalldata =
+            abi.encodeWithSelector(Wallet.execute.selector, address(usdc), uint256(0), transferCalldata);
+
+        (PackedUserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
+        _handleOp(userOp);
+        uint256 balance = usdc.balanceOf(guardian);
+        assertEq(balance, uint256(1e6));
     }
 
     // Internals
@@ -82,7 +112,7 @@ contract WalletFactoryTest is Test {
         bytes memory initCode;
         address walletAddress;
         if (isInitCode) {
-            (initCode, walletAddress) = _getInitCode(10_000);
+            (initCode, walletAddress) = _getInitCode(2);
         }
         address walletContract = address(wallet);
         vm.deal(walletContract, 10 ether);
@@ -115,12 +145,15 @@ contract WalletFactoryTest is Test {
         uint256 salt = 1;
 
         bytes4 createAccountSelector = walletFactory.createAccount.selector;
-        bytes memory createAccountData =
-            abi.encodeWithSelector(createAccountSelector, owner, guardian, salt, maxAmountAllowedWithoutAuthUSD);
+
+        bytes memory createAccountData = abi.encodeWithSelector(
+            createAccountSelector, owner, guardian, salt, maxAmountAllowedWithoutAuthUSD, tokens, feeds
+        );
 
         bytes memory initCode = abi.encodePacked(address(walletFactory), createAccountData);
 
-        address walletContract = walletFactory.getAddress(owner, guardian, salt, maxAmountAllowedWithoutAuthUSD);
+        address walletContract =
+            walletFactory.getAddress(owner, guardian, salt, maxAmountAllowedWithoutAuthUSD, tokens, feeds);
         wallet = Wallet(payable(walletContract));
 
         return (initCode, walletContract);

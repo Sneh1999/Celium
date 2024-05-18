@@ -13,28 +13,35 @@ contract WalletFactory {
         walletImplementation = new Wallet(entryPoint, address(this));
     }
 
-    function createAccount(address owner, address guardian, uint256 salt, uint256 maxAmountAllowed)
-        external
-        returns (Wallet)
-    {
-        address addr = getAddress(owner, guardian, salt, maxAmountAllowed);
+    function createAccount(
+        address owner,
+        address guardian,
+        uint256 salt,
+        uint256 maxAmountAllowed,
+        address[] calldata tokens,
+        address[] calldata _feeds
+    ) external returns (Wallet) {
+        address addr = getAddress(owner, guardian, salt, maxAmountAllowed, tokens, _feeds);
         uint256 codeSize = addr.code.length;
         if (codeSize > 0) {
             return Wallet(payable(addr));
         }
 
-        bytes memory walletInit = abi.encodeCall(Wallet.initialize, (owner, guardian, maxAmountAllowed));
+        bytes memory walletInit = abi.encodeCall(Wallet.initialize, (owner, guardian, maxAmountAllowed, tokens, _feeds));
         ERC1967Proxy proxy = new ERC1967Proxy{salt: bytes32(salt)}(address(walletImplementation), walletInit);
 
         return Wallet(payable(address(proxy)));
     }
 
-    function getAddress(address owner, address guardian, uint256 salt, uint256 maxAmountAllowed)
-        public
-        view
-        returns (address)
-    {
-        bytes memory walletInit = abi.encodeCall(Wallet.initialize, (owner, guardian, maxAmountAllowed));
+    function getAddress(
+        address owner,
+        address guardian,
+        uint256 salt,
+        uint256 maxAmountAllowed,
+        address[] calldata tokens,
+        address[] calldata _feeds
+    ) public view returns (address) {
+        bytes memory walletInit = abi.encodeCall(Wallet.initialize, (owner, guardian, maxAmountAllowed, tokens, _feeds));
         bytes memory proxyConstructor = abi.encode(address(walletImplementation), walletInit);
         bytes memory bytecode = abi.encodePacked(type(ERC1967Proxy).creationCode, proxyConstructor);
 

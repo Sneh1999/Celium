@@ -8,14 +8,20 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {console2} from "forge-std/console2.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+import {AggregatorV3Interface} from "chainlink/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 contract Wallet is BaseAccount, Initializable {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
 
+    address zero;
+
     // Events
     event WalletInitialized(IEntryPoint indexed entryPoint, address owner, address guardian, uint256 maxAmountAllowed);
     event TwoFactorAuthRequired(uint256 indexed pausedNonce);
+    event ChainlinkDataFeedNotFound(address token);
 
     // Errors
     error NotEntrypointOrFactory();
@@ -35,10 +41,14 @@ contract Wallet is BaseAccount, Initializable {
     // Function selector for "transfer(address,uint256)"
     bytes4 private constant TRANSFER_SELECTOR = 0xa9059cbb;
 
+    mapping(address token => address feed) feeds;
+
     uint256 lastUsedPausedNonce;
     uint256 maxTransferAllowedWithoutAuthUSD;
     address public owner;
     address public guardian;
+
+    AggregatorV3Interface internal dataFeed;
 
     mapping(uint256 nonce => Transaction txn) public pausedTransactions;
 
@@ -53,10 +63,22 @@ contract Wallet is BaseAccount, Initializable {
         _walletFactory = ourWalletFactory;
     }
 
-    function initialize(address _owner, address _guardian, uint256 _maxAmountAllowed) public initializer {
+    function initialize(
+        address _owner,
+        address _guardian,
+        uint256 _maxAmountAllowed,
+        address[] calldata tokens,
+        address[] calldata _feeds
+    ) public initializer {
         owner = _owner;
         guardian = _guardian;
         maxTransferAllowedWithoutAuthUSD = _maxAmountAllowed;
+
+        // NOTE: this implementation is for testnet only as their is no FeedRegistry Contract deployed on Sepolia
+        for (uint256 i = 0; i < tokens.length; i++) {
+            feeds[tokens[i]] = _feeds[i];
+        }
+
         emit WalletInitialized(_entryPoint, _owner, _guardian, _maxAmountAllowed);
     }
 
@@ -89,7 +111,8 @@ contract Wallet is BaseAccount, Initializable {
     // Internal Functions
     function _twoFactorRequired(address target, uint256 value, bytes memory data) internal returns (bool) {
         bytes4 selector;
-        console2.log("came to two factor");
+        uint256 tokenPrice;
+
         assembly {
             selector := mload(add(data, 32))
         }
@@ -102,11 +125,23 @@ contract Wallet is BaseAccount, Initializable {
             amount := mload(add(data, 68))
         }
 
-        // TODO: call chainlink function to determine the price
-        if (amount < maxTransferAllowedWithoutAuthUSD) {
+        if (feeds[target] == zero) {
             return false;
         }
-        console2.log("Two factor auth required");
+
+        dataFeed = AggregatorV3Interface(feeds[target]);
+        try dataFeed.latestRoundData() returns (uint80, int256 answer, uint256, uint256, uint80) {
+            tokenPrice = uint256(answer);
+        } catch {
+            emit ChainlinkDataFeedNotFound(target);
+            return false;
+        }
+
+        uint8 tokenDecimals = ERC20(target).decimals();
+
+        if ((amount * tokenPrice) / (10 ** (tokenDecimals + dataFeed.decimals())) < maxTransferAllowedWithoutAuthUSD) {
+            return false;
+        }
         emit TwoFactorAuthRequired(lastUsedPausedNonce);
         unchecked {
             lastUsedPausedNonce++;
