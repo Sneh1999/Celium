@@ -7,7 +7,6 @@ import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOper
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {console2} from "forge-std/console2.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {AggregatorV3Interface} from "chainlink/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
@@ -38,8 +37,8 @@ contract Wallet is BaseAccount, Initializable {
     // Storage
     address private immutable _walletFactory;
     IEntryPoint private immutable _entryPoint;
-    // Function selector for "transfer(address,uint256)"
-    bytes4 private constant TRANSFER_SELECTOR = 0xa9059cbb;
+    bytes4 private constant TRANSFER_SELECTOR = bytes4(keccak256("transfer(address,uint256)"));
+    bytes4 private constant APPROVE_SELECTOR = bytes4(keccak256("approve(address,uint256)"));
 
     mapping(address token => address feed) feeds;
 
@@ -83,7 +82,6 @@ contract Wallet is BaseAccount, Initializable {
     }
 
     function execute(address target, uint256 value, bytes calldata data) external _requireFromEntryPointOrFactory {
-        console2.log("hello from execute");
         bool is2FARequired = _twoFactorRequired(target, value, data);
 
         if (!is2FARequired) {
@@ -112,14 +110,14 @@ contract Wallet is BaseAccount, Initializable {
     function _twoFactorRequired(address target, uint256 value, bytes memory data) internal returns (bool) {
         bytes4 selector;
         uint256 tokenPrice;
+        uint256 amount;
 
         assembly {
             selector := mload(add(data, 32))
         }
 
-        if (selector != TRANSFER_SELECTOR) return false;
+        if (selector != TRANSFER_SELECTOR && selector != APPROVE_SELECTOR) return false;
 
-        uint256 amount;
         assembly {
             // Skip 32 + 4 + 32 (length + func sig + address)
             amount := mload(add(data, 68))
@@ -158,7 +156,6 @@ contract Wallet is BaseAccount, Initializable {
         returns (uint256)
     {
         // bytes32 hash = userOpHash.toEthSignedMessageHash();
-        console2.log("came to validate signature");
         if (owner == userOpHash.recover(userOp.signature)) {
             return 0;
         }

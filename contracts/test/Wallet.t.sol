@@ -104,6 +104,41 @@ contract WalletFactoryTest is Test {
         assertEq(balance, uint256(1e6));
     }
 
+    function test_approve_work_with_2fa() public {
+        bytes memory approveCalldata = abi.encodeWithSelector(ERC20.approve.selector, guardian, 3e6);
+        bytes memory transactionCalldata =
+            abi.encodeWithSelector(Wallet.execute.selector, address(usdc), uint256(0), approveCalldata);
+
+        (PackedUserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
+        _handleOp(userOp);
+        (address target, uint256 value, bytes memory data) = wallet.pausedTransactions(1);
+        Transaction memory txn = Transaction(target, value, data);
+
+        bytes32 digest = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encode(txn))));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guardianPrivateKey, digest);
+
+        uint256 nonce = 1;
+        bytes memory approveTransactionCalldata =
+            abi.encodeWithSelector(Wallet.approveTransaction.selector, nonce, abi.encodePacked(r, s, v));
+
+        (PackedUserOperation memory approveTransactionOp,) = _getUserOp(approveTransactionCalldata, "", false);
+        _handleOp(approveTransactionOp);
+        uint256 allowance = usdc.allowance(createdWalletAddress, guardian);
+        assertEq(allowance, uint256(3e6));
+    }
+
+    function test_approve_work_without_2fa() public {
+        bytes memory approveCalldata = abi.encodeWithSelector(ERC20.approve.selector, guardian, 1e6);
+        bytes memory transactionCalldata =
+            abi.encodeWithSelector(Wallet.execute.selector, address(usdc), uint256(0), approveCalldata);
+
+        (PackedUserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
+        _handleOp(userOp);
+        uint256 allowance = usdc.allowance(createdWalletAddress, guardian);
+        assertEq(allowance, uint256(1e6));
+    }
+
     // Internals
     function _getUserOp(bytes memory callData, bytes memory paymasterAndData, bool isInitCode)
         internal
