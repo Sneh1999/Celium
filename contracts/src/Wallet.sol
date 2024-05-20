@@ -8,14 +8,14 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
 import {AggregatorV3Interface} from "chainlink/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import "./Consumer.sol";
+import "forge-std/console.sol";
+import "./FeedsRegistry.sol";
 
 contract Wallet is BaseAccount, Initializable {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
-
-    address zero;
 
     // Events
     event WalletInitialized(IEntryPoint indexed entryPoint, address owner, address guardian, uint256 maxAmountAllowed);
@@ -37,19 +37,21 @@ contract Wallet is BaseAccount, Initializable {
     // Storage
     address private immutable _walletFactory;
     IEntryPoint private immutable _entryPoint;
+    FeedsRegistry private immutable feedsRegistry;
+    Consumer private immutable consumer;
+
     bytes4 private constant TRANSFER_SELECTOR = bytes4(keccak256("transfer(address,uint256)"));
     bytes4 private constant APPROVE_SELECTOR = bytes4(keccak256("approve(address,uint256)"));
-
-    mapping(address token => address feed) feeds;
-
     uint256 lastUsedPausedNonce;
     uint256 maxTransferAllowedWithoutAuthUSD;
     address public owner;
     address public guardian;
-
-    AggregatorV3Interface internal dataFeed;
+    address zero;
+    uint64 immutable subscriptionId;
 
     mapping(uint256 nonce => Transaction txn) public pausedTransactions;
+
+    AggregatorV3Interface internal dataFeed;
 
     // Modifiers
     modifier _requireFromEntryPointOrFactory() {
@@ -57,26 +59,24 @@ contract Wallet is BaseAccount, Initializable {
         _;
     }
 
-    constructor(IEntryPoint anEntryPoint, address ourWalletFactory) {
+    constructor(
+        IEntryPoint anEntryPoint,
+        address ourWalletFactory,
+        address _feedsRegistry,
+        address _consumer,
+        uint64 _subscriptionId
+    ) {
         _entryPoint = anEntryPoint;
         _walletFactory = ourWalletFactory;
+        consumer = Consumer(_consumer);
+        feedsRegistry = FeedsRegistry(_feedsRegistry);
+        subscriptionId = _subscriptionId;
     }
 
-    function initialize(
-        address _owner,
-        address _guardian,
-        uint256 _maxAmountAllowed,
-        address[] calldata tokens,
-        address[] calldata _feeds
-    ) public initializer {
+    function initialize(address _owner, address _guardian, uint256 _maxAmountAllowed) public initializer {
         owner = _owner;
         guardian = _guardian;
         maxTransferAllowedWithoutAuthUSD = _maxAmountAllowed;
-
-        // NOTE: this implementation is for testnet only as their is no FeedRegistry Contract deployed on Sepolia
-        for (uint256 i = 0; i < tokens.length; i++) {
-            feeds[tokens[i]] = _feeds[i];
-        }
 
         emit WalletInitialized(_entryPoint, _owner, _guardian, _maxAmountAllowed);
     }
@@ -111,23 +111,25 @@ contract Wallet is BaseAccount, Initializable {
         bytes4 selector;
         uint256 tokenPrice;
         uint256 amount;
+        string[] memory args = new string[](1);
+        args[0] = "1";
 
         assembly {
             selector := mload(add(data, 32))
         }
-
         if (selector != TRANSFER_SELECTOR && selector != APPROVE_SELECTOR) return false;
-
         assembly {
             // Skip 32 + 4 + 32 (length + func sig + address)
             amount := mload(add(data, 68))
         }
 
-        if (feeds[target] == zero) {
+        if (feedsRegistry.feeds(target) == zero) {
             return false;
         }
 
-        dataFeed = AggregatorV3Interface(feeds[target]);
+        console.log("what aksuha");
+
+        dataFeed = AggregatorV3Interface(feedsRegistry.feeds(target));
         try dataFeed.latestRoundData() returns (uint80, int256 answer, uint256, uint256, uint80) {
             tokenPrice = uint256(answer);
         } catch {
@@ -140,12 +142,13 @@ contract Wallet is BaseAccount, Initializable {
         if ((amount * tokenPrice) / (10 ** (tokenDecimals + dataFeed.decimals())) < maxTransferAllowedWithoutAuthUSD) {
             return false;
         }
-        emit TwoFactorAuthRequired(lastUsedPausedNonce);
         unchecked {
             lastUsedPausedNonce++;
         }
+        emit TwoFactorAuthRequired(lastUsedPausedNonce);
 
         pausedTransactions[lastUsedPausedNonce] = Transaction({data: data, value: value, target: target});
+        consumer.sendRequest(subscriptionId, args);
         return true;
     }
 

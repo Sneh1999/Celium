@@ -1,6 +1,14 @@
 [profile.default]
 src = "src"
 out = "out"
+test = "test"
 libs = ["lib"]
+fs_permissions = [{ access = "read", path = "./" }]
+solc = "0.8.25"
+evm_version = 'cancun'
 
-# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+[rpc_endpoints]
+sepolia = "https://rpc.ankr.com/eth_sepolia"
+
+[etherscan]
+sepolia = { key = "${BLOCK_EXPLORER_API_KEY}" }

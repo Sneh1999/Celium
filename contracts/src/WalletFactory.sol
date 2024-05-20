@@ -5,43 +5,41 @@ import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {Wallet} from "./Wallet.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Consumer} from "./Consumer.sol";
+import "forge-std/console.sol";
 
 contract WalletFactory {
     Wallet public immutable walletImplementation;
+    Consumer public immutable consumer;
 
-    constructor(IEntryPoint entryPoint) {
-        walletImplementation = new Wallet(entryPoint, address(this));
+    constructor(IEntryPoint entryPoint, address feedsRegistry, address _consumer, uint64 subscriptionId) {
+        walletImplementation = new Wallet(entryPoint, address(this), feedsRegistry, _consumer, subscriptionId);
+        consumer = Consumer(_consumer);
     }
 
-    function createAccount(
-        address owner,
-        address guardian,
-        uint256 salt,
-        uint256 maxAmountAllowed,
-        address[] calldata tokens,
-        address[] calldata _feeds
-    ) external returns (Wallet) {
-        address addr = getAddress(owner, guardian, salt, maxAmountAllowed, tokens, _feeds);
+    function createAccount(address owner, address guardian, uint256 salt, uint256 maxAmountAllowed)
+        external
+        returns (Wallet)
+    {
+        address addr = getAddress(owner, guardian, salt, maxAmountAllowed);
+
         uint256 codeSize = addr.code.length;
         if (codeSize > 0) {
             return Wallet(payable(addr));
         }
 
-        bytes memory walletInit = abi.encodeCall(Wallet.initialize, (owner, guardian, maxAmountAllowed, tokens, _feeds));
+        bytes memory walletInit = abi.encodeCall(Wallet.initialize, (owner, guardian, maxAmountAllowed));
         ERC1967Proxy proxy = new ERC1967Proxy{salt: bytes32(salt)}(address(walletImplementation), walletInit);
-
+        consumer.setAuthorizedWallet(address(proxy), true);
         return Wallet(payable(address(proxy)));
     }
 
-    function getAddress(
-        address owner,
-        address guardian,
-        uint256 salt,
-        uint256 maxAmountAllowed,
-        address[] calldata tokens,
-        address[] calldata _feeds
-    ) public view returns (address) {
-        bytes memory walletInit = abi.encodeCall(Wallet.initialize, (owner, guardian, maxAmountAllowed, tokens, _feeds));
+    function getAddress(address owner, address guardian, uint256 salt, uint256 maxAmountAllowed)
+        public
+        view
+        returns (address)
+    {
+        bytes memory walletInit = abi.encodeCall(Wallet.initialize, (owner, guardian, maxAmountAllowed));
         bytes memory proxyConstructor = abi.encode(address(walletImplementation), walletInit);
         bytes memory bytecode = abi.encodePacked(type(ERC1967Proxy).creationCode, proxyConstructor);
 

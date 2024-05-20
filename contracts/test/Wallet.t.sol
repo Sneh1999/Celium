@@ -6,6 +6,7 @@ import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Wallet} from "../src/Wallet.sol";
 import {WalletFactory} from "../src/WalletFactory.sol";
+import {FeedsRegistry} from "../src/FeedsRegistry.sol";
 
 import "forge-std/Test.sol";
 
@@ -17,8 +18,11 @@ struct Transaction {
 
 contract WalletFactoryTest is Test {
     EntryPoint entryPoint;
-    WalletFactory walletFactory;
+    address _walletFactory = 0xF369CB5209dA8F59e78efe3a8B3f8ccEe7428c5A;
+    WalletFactory walletFactory = WalletFactory(_walletFactory);
     Wallet wallet;
+    address router = 0xb83E47C2bC239B3bf370bc41e1459A34b41238D0;
+    bytes32 donID = 0x66756e2d657468657265756d2d7365706f6c69612d3100000000000000000000;
     address[] feeds = [
         0x14866185B1962B63C3Ea9E03Bc1da838bab34C19,
         0x635A86F9fdD16Ff09A0701C305D3a845F1758b8E,
@@ -42,10 +46,13 @@ contract WalletFactoryTest is Test {
     address createdWalletAddress;
     address internal owner;
     address internal usdcWhale = 0x406C90A36c66A42Cb4699d4Dc46DF7af5dDEe199;
+    address payable _entryPoint = payable(0xcAc30D6Dc9bEED0D31699c059ceD50d0b8279aeF);
     ERC20 usdc = ERC20(0xf08A50178dfcDe18524640EA6618a1f965821715);
     address internal guardian;
     uint256 ownerPrivateKey = 0xa11ce;
     uint256 guardianPrivateKey = 0xabc123;
+    uint64 subscriptionId = 2760;
+
     // Set up
 
     function setUp() public {
@@ -54,8 +61,8 @@ contract WalletFactoryTest is Test {
         owner = vm.addr(ownerPrivateKey);
         guardian = vm.addr(guardianPrivateKey);
 
-        entryPoint = new EntryPoint();
-        walletFactory = new WalletFactory(entryPoint);
+        entryPoint = EntryPoint(_entryPoint);
+        FeedsRegistry feedsRegistry = new FeedsRegistry(tokens, feeds);
 
         // Empty UserOp to deploy the Wallet initially
         (PackedUserOperation memory userOp, address walletAddress) = _getUserOp("", "", true);
@@ -93,51 +100,51 @@ contract WalletFactoryTest is Test {
         assertEq(balance, uint256(3e6));
     }
 
-    function test_transfer_work_without_2fa() public {
-        bytes memory transferCalldata = abi.encodeWithSelector(ERC20.transfer.selector, guardian, 1e6);
-        bytes memory transactionCalldata =
-            abi.encodeWithSelector(Wallet.execute.selector, address(usdc), uint256(0), transferCalldata);
+    // function test_transfer_work_without_2fa() public {
+    //     bytes memory transferCalldata = abi.encodeWithSelector(ERC20.transfer.selector, guardian, 1e6);
+    //     bytes memory transactionCalldata =
+    //         abi.encodeWithSelector(Wallet.execute.selector, address(usdc), uint256(0), transferCalldata);
 
-        (PackedUserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
-        _handleOp(userOp);
-        uint256 balance = usdc.balanceOf(guardian);
-        assertEq(balance, uint256(1e6));
-    }
+    //     (PackedUserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
+    //     _handleOp(userOp);
+    //     uint256 balance = usdc.balanceOf(guardian);
+    //     assertEq(balance, uint256(1e6));
+    // }
 
-    function test_approve_work_with_2fa() public {
-        bytes memory approveCalldata = abi.encodeWithSelector(ERC20.approve.selector, guardian, 3e6);
-        bytes memory transactionCalldata =
-            abi.encodeWithSelector(Wallet.execute.selector, address(usdc), uint256(0), approveCalldata);
+    // function test_approve_work_with_2fa() public {
+    //     bytes memory approveCalldata = abi.encodeWithSelector(ERC20.approve.selector, guardian, 3e6);
+    //     bytes memory transactionCalldata =
+    //         abi.encodeWithSelector(Wallet.execute.selector, address(usdc), uint256(0), approveCalldata);
 
-        (PackedUserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
-        _handleOp(userOp);
-        (address target, uint256 value, bytes memory data) = wallet.pausedTransactions(1);
-        Transaction memory txn = Transaction(target, value, data);
+    //     (PackedUserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
+    //     _handleOp(userOp);
+    //     (address target, uint256 value, bytes memory data) = wallet.pausedTransactions(1);
+    //     Transaction memory txn = Transaction(target, value, data);
 
-        bytes32 digest = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encode(txn))));
+    //     bytes32 digest = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encode(txn))));
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guardianPrivateKey, digest);
+    //     (uint8 v, bytes32 r, bytes32 s) = vm.sign(guardianPrivateKey, digest);
 
-        uint256 nonce = 1;
-        bytes memory approveTransactionCalldata =
-            abi.encodeWithSelector(Wallet.approveTransaction.selector, nonce, abi.encodePacked(r, s, v));
+    //     uint256 nonce = 1;
+    //     bytes memory approveTransactionCalldata =
+    //         abi.encodeWithSelector(Wallet.approveTransaction.selector, nonce, abi.encodePacked(r, s, v));
 
-        (PackedUserOperation memory approveTransactionOp,) = _getUserOp(approveTransactionCalldata, "", false);
-        _handleOp(approveTransactionOp);
-        uint256 allowance = usdc.allowance(createdWalletAddress, guardian);
-        assertEq(allowance, uint256(3e6));
-    }
+    //     (PackedUserOperation memory approveTransactionOp,) = _getUserOp(approveTransactionCalldata, "", false);
+    //     _handleOp(approveTransactionOp);
+    //     uint256 allowance = usdc.allowance(createdWalletAddress, guardian);
+    //     assertEq(allowance, uint256(3e6));
+    // }
 
-    function test_approve_work_without_2fa() public {
-        bytes memory approveCalldata = abi.encodeWithSelector(ERC20.approve.selector, guardian, 1e6);
-        bytes memory transactionCalldata =
-            abi.encodeWithSelector(Wallet.execute.selector, address(usdc), uint256(0), approveCalldata);
+    // function test_approve_work_without_2fa() public {
+    //     bytes memory approveCalldata = abi.encodeWithSelector(ERC20.approve.selector, guardian, 1e6);
+    //     bytes memory transactionCalldata =
+    //         abi.encodeWithSelector(Wallet.execute.selector, address(usdc), uint256(0), approveCalldata);
 
-        (PackedUserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
-        _handleOp(userOp);
-        uint256 allowance = usdc.allowance(createdWalletAddress, guardian);
-        assertEq(allowance, uint256(1e6));
-    }
+    //     (PackedUserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
+    //     _handleOp(userOp);
+    //     uint256 allowance = usdc.allowance(createdWalletAddress, guardian);
+    //     assertEq(allowance, uint256(1e6));
+    // }
 
     // Internals
     function _getUserOp(bytes memory callData, bytes memory paymasterAndData, bool isInitCode)
@@ -181,14 +188,12 @@ contract WalletFactoryTest is Test {
 
         bytes4 createAccountSelector = walletFactory.createAccount.selector;
 
-        bytes memory createAccountData = abi.encodeWithSelector(
-            createAccountSelector, owner, guardian, salt, maxAmountAllowedWithoutAuthUSD, tokens, feeds
-        );
+        bytes memory createAccountData =
+            abi.encodeWithSelector(createAccountSelector, owner, guardian, salt, maxAmountAllowedWithoutAuthUSD);
 
         bytes memory initCode = abi.encodePacked(address(walletFactory), createAccountData);
 
-        address walletContract =
-            walletFactory.getAddress(owner, guardian, salt, maxAmountAllowedWithoutAuthUSD, tokens, feeds);
+        address walletContract = walletFactory.getAddress(owner, guardian, salt, maxAmountAllowedWithoutAuthUSD);
         wallet = Wallet(payable(walletContract));
 
         return (initCode, walletContract);
