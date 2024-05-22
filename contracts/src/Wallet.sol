@@ -6,6 +6,8 @@ import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {AggregatorV3Interface} from "chainlink/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
@@ -112,7 +114,7 @@ contract Wallet is BaseAccount, Initializable {
         uint256 tokenPrice;
         uint256 amount;
         string[] memory args = new string[](1);
-        args[0] = "1";
+        args[0] = Strings.toHexString(msg.sender);
 
         assembly {
             selector := mload(add(data, 32))
@@ -126,8 +128,6 @@ contract Wallet is BaseAccount, Initializable {
         if (feedsRegistry.feeds(target) == zero) {
             return false;
         }
-
-        console.log("what aksuha");
 
         dataFeed = AggregatorV3Interface(feedsRegistry.feeds(target));
         try dataFeed.latestRoundData() returns (uint80, int256 answer, uint256, uint256, uint80) {
@@ -183,4 +183,6 @@ contract Wallet is BaseAccount, Initializable {
     function walletFactory() public view returns (address) {
         return _walletFactory;
     }
+
+    receive() external payable {}
 }

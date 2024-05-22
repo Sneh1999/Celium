@@ -4,13 +4,11 @@ pragma solidity ^0.8.20;
 import {FunctionsClient} from "chainlink/src/v0.8/functions/v1_0_0/FunctionsClient.sol";
 import {FunctionsRequest} from "chainlink/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol";
 
-import "forge-std/console.sol";
-
 contract Consumer is FunctionsClient {
     using FunctionsRequest for FunctionsRequest.Request;
 
     address private immutable router;
-    address private walletFactory;
+    address public walletFactory;
     bytes32 public s_lastRequestId;
     bytes public s_lastResponse;
     bytes public s_lastError;
@@ -21,9 +19,10 @@ contract Consumer is FunctionsClient {
 
     event ChainlinkFunctionsResponse(bytes32 indexed requestId, string character, bytes response, bytes err);
 
-    string constant source = "const characterId = args[0];" "const apiResponse = await Functions.makeHttpRequest({"
-        "url: `https://swapi.info/api/people/${characterId}/`" "});" "if (apiResponse.error) {"
-        "throw Error('Request failed');" "}" "const { data } = apiResponse;" "return Functions.encodeString(data.name);";
+    string constant source = "const address = args[0];" "const apiResponse = await Functions.makeHttpRequest({"
+        "url: `https://93d8-2607-fea8-a9a8-a900-d89c-5a8f-dc2a-f17b.ngrok-free.app/api/request-2fa/${address}/`" "});"
+        "if (apiResponse.error) {" "throw Error('Request failed');" "}" "const { data } = apiResponse;"
+        "return Functions.encodeString(data.name);";
 
     mapping(address => bool) public authorizedWallets;
 
@@ -47,7 +46,6 @@ contract Consumer is FunctionsClient {
 
         req.initializeRequestForInlineJavaScript(source); // Initialize the request with JS code
         if (args.length > 0) req.setArgs(args); // Set the arguments for the request
-        console.log("I came here");
         // Send the request and store the request ID
         s_lastRequestId = _sendRequest(req.encodeCBOR(), subscriptionId, gasLimit, donId);
 
@@ -74,10 +72,6 @@ contract Consumer is FunctionsClient {
     }
 
     function setWalletFactoryAddress(address _walletFactory) external {
-        if (_walletFactory == address(0)) {
-            revert("Invalid address");
-        }
-
         walletFactory = _walletFactory;
     }
 
