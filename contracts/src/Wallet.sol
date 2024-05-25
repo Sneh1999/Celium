@@ -11,6 +11,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {AggregatorV3Interface} from "chainlink/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {ISwapRouter} from "v3-periphery/interfaces/ISwapRouter.sol";
 import "./Consumer.sol";
 import "forge-std/console.sol";
 import "./FeedsRegistry.sol";
@@ -41,6 +42,7 @@ contract Wallet is BaseAccount, Initializable {
     IEntryPoint private immutable _entryPoint;
     FeedsRegistry private immutable feedsRegistry;
     Consumer private immutable consumer;
+    ISwapRouter private immutable swapRouter;
 
     bytes4 private constant TRANSFER_SELECTOR = bytes4(keccak256("transfer(address,uint256)"));
     bytes4 private constant APPROVE_SELECTOR = bytes4(keccak256("approve(address,uint256)"));
@@ -66,11 +68,13 @@ contract Wallet is BaseAccount, Initializable {
         address ourWalletFactory,
         address _feedsRegistry,
         address _consumer,
+        address uniswapRouter,
         uint64 _subscriptionId
     ) {
         _entryPoint = anEntryPoint;
         _walletFactory = ourWalletFactory;
         consumer = Consumer(_consumer);
+        swapRouter = ISwapRouter(uniswapRouter);
         feedsRegistry = FeedsRegistry(_feedsRegistry);
         subscriptionId = _subscriptionId;
     }
@@ -102,6 +106,13 @@ contract Wallet is BaseAccount, Initializable {
         if (guardian != txnHash.recover(approveSignature)) revert GuardianSignatureVerificationFailed();
 
         _call(txn.target, txn.value, txn.data);
+    }
+
+    function swapAndBridge(ISwapRouter.ExactInputSingleParams calldata exactInputParams)
+        external
+        _requireFromEntryPointOrFactory
+    {
+        uint256 amountOut = swapRouter.exactInputSingle(exactInputParams);
     }
 
     function addDeposit() public payable {

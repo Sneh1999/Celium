@@ -47,7 +47,7 @@ contract WalletFactoryScript is Script {
     FeedsRegistry feedsRegistry = FeedsRegistry(0x0B7f332ECeF4141B6eb314C96363E777D1Ede2a4);
     ERC20 link = ERC20(0x779877A7B0D9E8603169DdbD7836e478b4624789);
     EntryPoint entryPoint = EntryPoint(payable(0xcAc30D6Dc9bEED0D31699c059ceD50d0b8279aeF));
-
+    address uniswapRouter = 0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14;
     WalletFactory walletFactory;
     Wallet wallet;
     Consumer functionsConsumer = Consumer(0xf99F35d284675D594Cf0dda5C7B8979Df947e134);
@@ -56,7 +56,7 @@ contract WalletFactoryScript is Script {
         vm.startBroadcast(ownerPrivateKey);
 
         walletFactory = new WalletFactory(
-            IEntryPoint(entryPoint), address(feedsRegistry), address(functionsConsumer), subscriptionId
+            IEntryPoint(entryPoint), address(feedsRegistry), address(functionsConsumer), uniswapRouter, subscriptionId
         );
         assert(address(walletFactory.consumer()) == address(functionsConsumer));
         functionsConsumer.setWalletFactoryAddress(address(walletFactory));

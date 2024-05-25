@@ -1,7 +1,15 @@
+@ensdomains/=lib/account-abstraction/node_modules/@ensdomains/
+@openzeppelin/=lib/account-abstraction/node_modules/@openzeppelin/contracts/
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+@uniswap/=lib/account-abstraction/node_modules/@uniswap/
 account-abstraction/=lib/account-abstraction/contracts/
+base64-sol/=lib/account-abstraction/node_modules/base64-sol/
 chainlink/=lib/chainlink/contracts/
 ds-test/=lib/openzeppelin-contracts/lib/forge-std/lib/ds-test/src/
 erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/
 forge-std/=lib/forge-std/src/
+hardhat-deploy/=lib/account-abstraction/node_modules/hardhat-deploy/
+hardhat/=lib/account-abstraction/node_modules/hardhat/
 openzeppelin-contracts/=lib/openzeppelin-contracts/
+v3-core/=lib/v3-core/
+v3-periphery/=lib/v3-periphery/contracts/
