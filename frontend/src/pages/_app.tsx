@@ -1,6 +1,14 @@
-import "@/styles/globals.css";
-import type { AppProps } from "next/app";
+import 'tailwindcss/tailwind.css'
 
-export default function App({ Component, pageProps }: AppProps) {
-  return <Component {...pageProps} />;
+import React from 'react'
+import type { AppProps } from 'next/app'
+
+function App({ Component, pageProps }: AppProps) {
+    // suppress useLayoutEffect warnings when running outside a browser
+    if (!process.browser) React.useLayoutEffect = React.useEffect
+
+    return (
+        <Component {...pageProps} />
+    )
 }
+export default App
