@@ -12,8 +12,16 @@ contract WalletFactory {
     Wallet public immutable walletImplementation;
     Consumer public immutable consumer;
 
-    constructor(IEntryPoint entryPoint, address feedsRegistry, address _consumer,  address uniswapRouter, uint64 subscriptionId) {
-        walletImplementation = new Wallet(entryPoint, address(this), feedsRegistry, _consumer, uniswapRouter, subscriptionId);
+    constructor(
+        IEntryPoint entryPoint,
+        address feedsRegistry,
+        address _consumer,
+        address uniswapRouter,
+        address ccipRouter,
+        uint64 subscriptionId
+    ) {
+        walletImplementation =
+            new Wallet(entryPoint, address(this), feedsRegistry, _consumer, uniswapRouter, ccipRouter, subscriptionId);
         consumer = Consumer(_consumer);
     }
 

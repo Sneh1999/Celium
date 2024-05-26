@@ -12,6 +12,10 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {AggregatorV3Interface} from "chainlink/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {ISwapRouter} from "v3-periphery/interfaces/ISwapRouter.sol";
+
+import {Client} from "ccip/src/v0.8/ccip/libraries/Client.sol";
+import {IRouterClient} from "ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
+
 import "./Consumer.sol";
 import "forge-std/console.sol";
 import "./FeedsRegistry.sol";
@@ -25,10 +29,23 @@ contract Wallet is BaseAccount, Initializable {
     event TwoFactorAuthRequired(uint256 indexed pausedNonce);
     event ChainlinkDataFeedNotFound(address token);
 
+    error NotEnoughBalance(uint256 currentBalance, uint256 calculatedFees);
+
+    event TokensTransferred( // The unique ID of the message.
+        bytes32 indexed messageId,
+        uint64 indexed destinationChainSelector,
+        address receiver,
+        address token,
+        uint256 tokenAmount,
+        address feeToken,
+        uint256 fees
+    );
+
     // Errors
     error NotEntrypointOrFactory();
     error InvalidPausedTransactionNonce();
     error GuardianSignatureVerificationFailed();
+    error InvalidReceiverAddress(); // Used when the receiver address is 0.
 
     // Structs
     struct Transaction {
@@ -42,6 +59,7 @@ contract Wallet is BaseAccount, Initializable {
     IEntryPoint private immutable _entryPoint;
     FeedsRegistry private immutable feedsRegistry;
     Consumer private immutable consumer;
+    IRouterClient private immutable s_router;
     ISwapRouter private immutable swapRouter;
 
     bytes4 private constant TRANSFER_SELECTOR = bytes4(keccak256("transfer(address,uint256)"));
@@ -63,18 +81,25 @@ contract Wallet is BaseAccount, Initializable {
         _;
     }
 
+    modifier validateReceiver(address _receiver) {
+        if (_receiver == address(0)) revert InvalidReceiverAddress();
+        _;
+    }
+
     constructor(
         IEntryPoint anEntryPoint,
         address ourWalletFactory,
         address _feedsRegistry,
         address _consumer,
         address uniswapRouter,
+        address ccipRouter,
         uint64 _subscriptionId
     ) {
         _entryPoint = anEntryPoint;
         _walletFactory = ourWalletFactory;
         consumer = Consumer(_consumer);
         swapRouter = ISwapRouter(uniswapRouter);
+        s_router = IRouterClient(ccipRouter);
         feedsRegistry = FeedsRegistry(_feedsRegistry);
         subscriptionId = _subscriptionId;
     }
@@ -108,11 +133,14 @@ contract Wallet is BaseAccount, Initializable {
         _call(txn.target, txn.value, txn.data);
     }
 
-    function swapAndBridge(ISwapRouter.ExactInputSingleParams calldata exactInputParams)
-        external
-        _requireFromEntryPointOrFactory
-    {
+    function swapAndBridge(
+        ISwapRouter.ExactInputSingleParams calldata exactInputParams,
+        uint64 _destinationChainSelector
+    ) external _requireFromEntryPointOrFactory returns (bytes32) {
         uint256 amountOut = swapRouter.exactInputSingle(exactInputParams);
+        bytes32 messageId =
+            _transferTokensPayNative(_destinationChainSelector, address(this), exactInputParams.tokenOut, amountOut);
+        return messageId;
     }
 
     function addDeposit() public payable {
@@ -175,6 +203,49 @@ contract Wallet is BaseAccount, Initializable {
         }
 
         return 1;
+    }
+
+    // TODO add check for allowing only allowlist chains
+    function _transferTokensPayNative(
+        uint64 _destinationChainSelector,
+        address _receiver,
+        address _token,
+        uint256 _amount
+    ) internal validateReceiver(_receiver) returns (bytes32 messageId) {
+        Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(_receiver, _token, _amount, address(0));
+
+        uint256 fees = s_router.getFee(_destinationChainSelector, evm2AnyMessage);
+
+        if (fees > address(this).balance) {
+            revert NotEnoughBalance(address(this).balance, fees);
+        }
+
+        ERC20(_token).approve(address(s_router), _amount);
+
+        messageId = s_router.ccipSend{value: fees}(_destinationChainSelector, evm2AnyMessage);
+
+        // Emit an event with message details
+        emit TokensTransferred(messageId, _destinationChainSelector, _receiver, _token, _amount, address(0), fees);
+
+        // Return the message ID
+        return messageId;
+    }
+
+    function _buildCCIPMessage(address _receiver, address _token, uint256 _amount, address _feeTokenAddress)
+        private
+        pure
+        returns (Client.EVM2AnyMessage memory)
+    {
+        Client.EVMTokenAmount[] memory tokenAmounts = new Client.EVMTokenAmount[](1);
+        tokenAmounts[0] = Client.EVMTokenAmount({token: _token, amount: _amount});
+
+        return Client.EVM2AnyMessage({
+            receiver: abi.encode(_receiver),
+            data: "",
+            tokenAmounts: tokenAmounts,
+            extraArgs: Client._argsToBytes(Client.EVMExtraArgsV1({gasLimit: 0})),
+            feeToken: _feeTokenAddress
+        });
     }
 
     function _call(address target, uint256 value, bytes memory data) internal {
