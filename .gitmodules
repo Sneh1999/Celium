@@ -19,3 +19,6 @@
 [submodule "contracts/lib/ccip"]
 	path = contracts/lib/ccip
 	url = https://github.com/smartcontractkit/ccip
+[submodule "contracts/lib/chainlink-local"]
+	path = contracts/lib/chainlink-local
+	url = https://github.com/smartcontractkit/chainlink-local

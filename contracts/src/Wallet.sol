@@ -4,12 +4,12 @@ pragma solidity ^0.8.20;
 import {BaseAccount} from "account-abstraction/core/BaseAccount.sol";
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
-import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {Initializable} from "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
+import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {MessageHashUtils} from "openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {AggregatorV3Interface} from "chainlink/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {ISwapRouter} from "v3-periphery/interfaces/ISwapRouter.sol";
 
@@ -136,10 +136,13 @@ contract Wallet is BaseAccount, Initializable {
     function swapAndBridge(
         ISwapRouter.ExactInputSingleParams calldata exactInputParams,
         uint64 _destinationChainSelector
-    ) external _requireFromEntryPointOrFactory returns (bytes32) {
-        uint256 amountOut = swapRouter.exactInputSingle(exactInputParams);
-        bytes32 messageId =
-            _transferTokensPayNative(_destinationChainSelector, address(this), exactInputParams.tokenOut, amountOut);
+    ) public _requireFromEntryPointOrFactory returns (bytes32) {
+        console.log("Swapping and Bridging");
+        // uint256 amountOut = swapRouter.exactInputSingle(exactInputParams);
+        // console.log(amountOut);
+        bytes32 messageId = _transferTokensPayNative(
+            _destinationChainSelector, address(this), exactInputParams.tokenOut, exactInputParams.amountIn
+        );
         return messageId;
     }
 
