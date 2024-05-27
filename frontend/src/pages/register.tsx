@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/auth'
 import { useState, FormEventHandler } from 'react'
 import Head from 'next/head'
 import PrimaryButton from '@/components/PrimaryButton'
+import { ConnectButton } from '@rainbow-me/rainbowkit'
 
 const Register = () => {
     const { register } = useAuth({
@@ -30,7 +31,7 @@ const Register = () => {
             password,
             password_confirmation: passwordConfirmation,
             setErrors,
-            setStatus: () => { }
+            setStatus: () => {},
         })
     }
 
@@ -43,19 +44,11 @@ const Register = () => {
                 <form onSubmit={submitForm}>
                     {/* Name */}
                     <div>
-                        <Label htmlFor="name">Name</Label>
+                        <Label htmlFor="name">Wallet</Label>
 
-                        <Input
-                            id="name"
-                            type="text"
-                            value={name}
-                            className="block mt-1 w-full"
-                            onChange={event => setName(event.target.value)}
-                            required
-                            autoFocus
-                        />
-
-                        <InputError messages={errors.name} className="mt-2" />
+                        <div className="w-full mt-1 block">
+                            <ConnectButton chainStatus={'none'} />
+                        </div>
                     </div>
 
                     {/* Email Address */}
@@ -88,7 +81,10 @@ const Register = () => {
                             autoComplete="new-password"
                         />
 
-                        <InputError messages={errors.password} className="mt-2" />
+                        <InputError
+                            messages={errors.password}
+                            className="mt-2"
+                        />
                     </div>
 
                     {/* Confirm Password */}
@@ -108,7 +104,10 @@ const Register = () => {
                             required
                         />
 
-                        <InputError messages={errors.password_confirmation} className="mt-2" />
+                        <InputError
+                            messages={errors.password_confirmation}
+                            className="mt-2"
+                        />
                     </div>
 
                     <div className="flex items-center justify-end mt-4">
