@@ -4,6 +4,7 @@
 @uniswap/=lib/account-abstraction/node_modules/@uniswap/
 account-abstraction/=lib/account-abstraction/contracts/
 base64-sol/=lib/account-abstraction/node_modules/base64-sol/
+ccip/=lib/ccip/contracts/
 chainlink/=lib/chainlink/contracts/
 ds-test/=lib/openzeppelin-contracts/lib/forge-std/lib/ds-test/src/
 erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/
