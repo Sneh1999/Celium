@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,4 +5,64 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id Int @id @default(autoincrement())
+
+  address String @unique
+
+  email                  String?                  @unique
+  emailVerifiedAt        DateTime?
+  emailVerificationToken EmailVerificationToken[]
+
+  wallets Wallet[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmailVerificationToken {
+  id Int @id @default(autoincrement())
+
+  email String
+  user  User   @relation(fields: [email], references: [email])
+
+  token   String   @unique
+  expires DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Wallet {
+  id Int @id @default(autoincrement())
+
+  address String @unique
+
+  ownerId Int
+  owner   User @relation(fields: [ownerId], references: [id])
+
+  transactions Transaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Transaction {
+  id Int @id @default(autoincrement())
+
+  target String
+  value  BigInt
+  data   String
+
+  isPaused      Boolean @default(false)
+  isSuccess     Boolean @default(false)
+  twoFactorCode String?
+
+  walletId Int
+  wallet   Wallet @relation(fields: [walletId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
