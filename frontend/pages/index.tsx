@@ -1,4 +1,8 @@
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import PointsAllTime from "@/components/points/all-time";
+import PointsBalance from "@/components/points/balance";
+import { RecentTransactions } from "@/components/transactions/recent-txns";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { WalletsList } from "@/components/wallets/wallets-list";
 import type { NextPage } from "next";
 import Head from "next/head";
 
@@ -14,58 +18,23 @@ const Home: NextPage = () => {
         <link href="/favicon.ico" rel="icon" />
       </Head>
 
-      <main>
-        <ConnectButton />
+      <main className="max-w-7xl mx-auto pt-20 flex flex-col gap-4">
+        <div className="grid grid-cols-2 gap-4">
+          <WalletsList />
+          <RecentTransactions />
+        </div>
 
-        <h1>
-          Welcome to <a href="">RainbowKit</a> + <a href="">wagmi</a> +{" "}
-          <a href="https://nextjs.org">Next.js!</a>
-        </h1>
-
-        <p>
-          Get started by editing <code>pages/index.tsx</code>
-        </p>
-
-        <div>
-          <a href="https://rainbowkit.com">
-            <h2>RainbowKit Documentation &rarr;</h2>
-            <p>Learn how to customize your wallet connection flow.</p>
-          </a>
-
-          <a href="https://wagmi.sh">
-            <h2>wagmi Documentation &rarr;</h2>
-            <p>Learn how to interact with Ethereum.</p>
-          </a>
-
-          <a href="https://github.com/rainbow-me/rainbowkit/tree/main/examples">
-            <h2>RainbowKit Examples &rarr;</h2>
-            <p>Discover boilerplate example RainbowKit projects.</p>
-          </a>
-
-          <a href="https://nextjs.org/docs">
-            <h2>Next.js Documentation &rarr;</h2>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://github.com/vercel/next.js/tree/canary/examples">
-            <h2>Next.js Examples &rarr;</h2>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app">
-            <h2>Deploy &rarr;</h2>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
+        <div className="grid grid-cols-4 gap-4">
+          <PointsAllTime />
+          <PointsBalance />
+          <Alert variant="success" className="col-span-2">
+            <AlertTitle>All good!</AlertTitle>
+            <AlertDescription>
+              You have no transactions that need your attention right now.
+            </AlertDescription>
+          </Alert>
         </div>
       </main>
-
-      <footer>
-        <a href="https://rainbow.me" rel="noopener noreferrer" target="_blank">
-          Made with ❤️ by your frens at 🌈
-        </a>
-      </footer>
     </div>
   );
 };
