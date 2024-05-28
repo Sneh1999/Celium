@@ -16,12 +16,12 @@ contract WalletFactory {
         IEntryPoint entryPoint,
         address feedsRegistry,
         address _consumer,
-        address uniswapRouter,
+        address _universalRouter,
         address ccipRouter,
         uint64 subscriptionId
     ) {
         walletImplementation =
-            new Wallet(entryPoint, address(this), feedsRegistry, _consumer, uniswapRouter, ccipRouter, subscriptionId);
+            new Wallet(entryPoint, address(this), feedsRegistry, _consumer, _universalRouter, ccipRouter, subscriptionId);
         consumer = Consumer(_consumer);
     }
 
