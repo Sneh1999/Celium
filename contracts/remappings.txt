@@ -1,4 +1,5 @@
 @ensdomains/=lib/account-abstraction/node_modules/@ensdomains/
+@chainlink/local/src/=lib/chainlink-local/src/
 @openzeppelin/=lib/account-abstraction/node_modules/@openzeppelin/contracts/
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
 @uniswap/=lib/account-abstraction/node_modules/@uniswap/

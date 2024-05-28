@@ -4,14 +4,14 @@ pragma solidity ^0.8.20;
 import {BaseAccount} from "account-abstraction/core/BaseAccount.sol";
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
-import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {Initializable} from "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
+import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {MessageHashUtils} from "openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {AggregatorV3Interface} from "chainlink/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {ISwapRouter} from "v3-periphery/interfaces/ISwapRouter.sol";
+import {IUniversalRouter} from "universal-router/contracts/interfaces/IUniversalRouter.sol";
 
 import {Client} from "ccip/src/v0.8/ccip/libraries/Client.sol";
 import {IRouterClient} from "ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
@@ -60,7 +60,8 @@ contract Wallet is BaseAccount, Initializable {
     FeedsRegistry private immutable feedsRegistry;
     Consumer private immutable consumer;
     IRouterClient private immutable s_router;
-    ISwapRouter private immutable swapRouter;
+    // Permit2 private immutable permit2;
+    IUniversalRouter private immutable universalRouter;
 
     bytes4 private constant TRANSFER_SELECTOR = bytes4(keccak256("transfer(address,uint256)"));
     bytes4 private constant APPROVE_SELECTOR = bytes4(keccak256("approve(address,uint256)"));
@@ -91,14 +92,16 @@ contract Wallet is BaseAccount, Initializable {
         address ourWalletFactory,
         address _feedsRegistry,
         address _consumer,
-        address uniswapRouter,
+        address _universalRouter,
+        // address _permit2,
         address ccipRouter,
         uint64 _subscriptionId
     ) {
         _entryPoint = anEntryPoint;
         _walletFactory = ourWalletFactory;
         consumer = Consumer(_consumer);
-        swapRouter = ISwapRouter(uniswapRouter);
+        universalRouter = IUniversalRouter(_universalRouter);
+        // permit2 = Permit2(_permit2);
         s_router = IRouterClient(ccipRouter);
         feedsRegistry = FeedsRegistry(_feedsRegistry);
         subscriptionId = _subscriptionId;
@@ -134,12 +137,26 @@ contract Wallet is BaseAccount, Initializable {
     }
 
     function swapAndBridge(
-        ISwapRouter.ExactInputSingleParams calldata exactInputParams,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 amountOutMin,
+        bytes memory path,
         uint64 _destinationChainSelector
-    ) external _requireFromEntryPointOrFactory returns (bytes32) {
-        uint256 amountOut = swapRouter.exactInputSingle(exactInputParams);
-        bytes32 messageId =
-            _transferTokensPayNative(_destinationChainSelector, address(this), exactInputParams.tokenOut, amountOut);
+    ) public _requireFromEntryPointOrFactory returns (bytes32) {
+        ERC20(tokenIn).transfer(address(universalRouter), amountIn);
+
+        uint256 balanceBefore = ERC20(tokenOut).balanceOf(address(this));
+        // Uniswap V3 exactInputSwap
+        bytes memory commands = hex"00";
+        bytes[] memory inputs = new bytes[](1);
+        inputs[0] = abi.encode(address(this), amountIn, amountOutMin, path, false);
+
+        universalRouter.execute(commands, inputs, block.timestamp);
+
+        uint256 amountOut = ERC20(tokenOut).balanceOf(address(this)) - balanceBefore;
+
+        bytes32 messageId = _transferTokensPayNative(_destinationChainSelector, address(this), tokenOut, amountOut);
         return messageId;
     }
 

@@ -3,8 +3,8 @@ pragma solidity ^0.8.12;
 
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {Wallet} from "./Wallet.sol";
-import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Create2} from "openzeppelin-contracts/contracts/utils/Create2.sol";
+import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Consumer} from "./Consumer.sol";
 import "forge-std/console.sol";
 
@@ -16,12 +16,12 @@ contract WalletFactory {
         IEntryPoint entryPoint,
         address feedsRegistry,
         address _consumer,
-        address uniswapRouter,
+        address _universalRouter,
         address ccipRouter,
         uint64 subscriptionId
     ) {
         walletImplementation =
-            new Wallet(entryPoint, address(this), feedsRegistry, _consumer, uniswapRouter, ccipRouter, subscriptionId);
+            new Wallet(entryPoint, address(this), feedsRegistry, _consumer, _universalRouter, ccipRouter, subscriptionId);
         consumer = Consumer(_consumer);
     }
 
