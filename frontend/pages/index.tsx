@@ -1,7 +1,7 @@
 import PointsAllTime from "@/components/points/all-time";
 import PointsBalance from "@/components/points/balance";
+import { AttentionAlert } from "@/components/transactions/attention-alert";
 import { RecentTransactions } from "@/components/transactions/recent-txns";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { WalletsList } from "@/components/wallets/wallets-list";
 import type { NextPage } from "next";
 import Head from "next/head";
@@ -27,12 +27,8 @@ const Home: NextPage = () => {
         <div className="grid grid-cols-4 gap-4">
           <PointsAllTime />
           <PointsBalance />
-          <Alert variant="success" className="col-span-2">
-            <AlertTitle>All good!</AlertTitle>
-            <AlertDescription>
-              You have no transactions that need your attention right now.
-            </AlertDescription>
-          </Alert>
+
+          <AttentionAlert />
         </div>
       </main>
     </div>

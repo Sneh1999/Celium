@@ -1,14 +1,11 @@
-import {
-  ChainNamesToChainEnum,
-  chainNameSchema,
-  getViemChainFromChainName,
-} from "@/lib/chains";
+import { chainNameSchema, getViemChainFromChainName } from "@/lib/chains";
 import prisma from "@/lib/db";
 import { createPublicClient, http } from "viem";
 import { readContract } from "viem/actions";
 import { z } from "zod";
 import { abi as WalletFactoryABI } from "../../../contracts/out/WalletFactory.sol/WalletFactory.json" assert { type: "json" };
 import { authedUserProcedure, router } from "../trpc";
+import { Chain } from "@prisma/client";
 
 export const walletRouter = router({
   getWallets: authedUserProcedure.query(async ({ ctx }) => {
@@ -66,7 +63,7 @@ export const walletRouter = router({
           address: computedWalletAddress,
           maxUSDAmountAllowed: input.maxUSDAmountAllowed,
           isDeployed: false,
-          chain: ChainNamesToChainEnum[input.chainName],
+          chain: input.chainName.toUpperCase() as Chain,
           ownerId: ctx.session.user.id,
         },
       });

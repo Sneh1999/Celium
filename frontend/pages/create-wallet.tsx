@@ -25,6 +25,8 @@ import { toast } from "sonner";
 import { getAuthOptions } from "./api/auth/[...nextauth]";
 import { useIsMounted } from "@/hooks/useIsMounted";
 import { useRouter } from "next/router";
+import { ChainFeatures } from "@/lib/features";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await getServerSession(
@@ -154,6 +156,17 @@ export default function CreateWalletPage() {
             onChange={(e) => setMaxAmountAllowed(parseInt(e.target.value))}
           />
         </div>
+
+        {!ChainFeatures[chain].functions && (
+          <Alert variant={"error"}>
+            <AlertTitle className="text-lg font-bold">Important</AlertTitle>
+            <AlertDescription>
+              This network does not supported Chainlink Functions yet. You will
+              not receive notifications about transactions that are blocked by
+              2FA, but still be able to see them on the Celium platform.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="flex items-center justify-end gap-2">
           <Button onClick={handleCreateWallet} variant="secondary">
