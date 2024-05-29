@@ -53,6 +53,7 @@ model Wallet {
   address             String  @unique
   maxUSDAmountAllowed Int
   chain               Chain
+  salt                Int
   isDeployed          Boolean @default(false)
 
   ownerId Int

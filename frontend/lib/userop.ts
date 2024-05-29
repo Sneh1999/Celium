@@ -1,16 +1,16 @@
-import { PublicClient, WalletClient } from "viem";
+import { PublicClient, WalletClient, createPublicClient, http } from "viem";
 import { V06 } from "userop";
 import { WalletABI } from "@/abis/Wallet.abi";
 import { WalletFactoryABI } from "@/abis/WalletFactory.abi";
 import { ContractAddressesByChain } from "./contracts";
-import { ChainNames } from "./chains";
+import { ChainNames, getViemChainFromChainName } from "./chains";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
 interface GetAccountInstanceOpts {
   chainName: ChainNames;
   ownerAddress: `0x${string}`;
-  publicClient: PublicClient;
   walletClient: WalletClient;
+  salt: bigint;
   usePaymaster?: boolean;
 }
 
@@ -19,7 +19,11 @@ export async function getAccountInstance(opts: GetAccountInstanceOpts) {
     accountAbi: WalletABI,
     factoryAbi: WalletFactoryABI,
     factoryAddress: ContractAddressesByChain[opts.chainName].factoryAddress,
-    ethClient: opts.publicClient,
+    // @ts-expect-error: Weird viem version mismatch stuff that doesn't affect anything
+    ethClient: createPublicClient({
+      chain: getViemChainFromChainName(opts.chainName),
+      transport: http(),
+    }),
     entryPointAddress:
       ContractAddressesByChain[opts.chainName].entrypointAddress,
     setFactoryData: async (salt, encoder) => {
@@ -55,6 +59,8 @@ export async function getAccountInstance(opts: GetAccountInstanceOpts) {
       };
     },
   });
+
+  account.setSalt(opts.salt);
 
   return account;
 }

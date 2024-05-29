@@ -49,6 +49,7 @@ export const walletRouter = router({
       const factoryAddress =
         ContractAddressesByChain[input.chainName].factoryAddress;
 
+      const salt = Math.floor(Math.random() * 1_000_000);
       const computedWalletAddress = (await readContract(publicClient, {
         address: factoryAddress,
         abi: WalletFactoryABI,
@@ -56,7 +57,7 @@ export const walletRouter = router({
         args: [
           ctx.session.user.address as `0x${string}`,
           process.env.NEXT_PUBLIC_GUARDIAN_ADDRESS,
-          BigInt(0),
+          BigInt(salt),
           BigInt(input.maxUSDAmountAllowed),
         ],
       })) as string;
@@ -66,6 +67,7 @@ export const walletRouter = router({
           name: input.name,
           address: computedWalletAddress,
           maxUSDAmountAllowed: input.maxUSDAmountAllowed,
+          salt,
           isDeployed: false,
           chain: input.chainName.toUpperCase() as Chain,
           ownerId: ctx.session.user.id,
