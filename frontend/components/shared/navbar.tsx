@@ -1,10 +1,37 @@
+import Link from "next/link";
 import { SignInWithEthereum } from "./sign-in-with-ethereum";
 
 export function Navbar() {
   return (
     <div className="h-16 bg-background text-foreground">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-input">
+      <div className="flex items-center gap-4 justify-between px-4 py-2 border-b border-input">
         <h2 className="flex-shrink-0 text-2xl font-bold">Celium</h2>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/"
+            className="font-medium text-sm border-b transition-all duration-300 border-transparent hover:border-muted-foreground"
+          >
+            Home
+          </Link>
+          <Link
+            href="/transfer"
+            className="font-medium text-sm h-full border-b transition-all duration-300 border-transparent hover:border-muted-foreground"
+          >
+            Transfer
+          </Link>
+          <Link
+            href="/swap"
+            className="font-medium text-sm h-full border-b transition-all duration-300 border-transparent hover:border-muted-foreground"
+          >
+            Swap
+          </Link>
+          <Link
+            href="/bridge"
+            className="font-medium text-sm h-full border-b transition-all duration-300 border-transparent hover:border-muted-foreground"
+          >
+            Bridge
+          </Link>
+        </div>
         <div className="flex-1 flex justify-end">
           <div className="flex items-center">
             <SignInWithEthereum />

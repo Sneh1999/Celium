@@ -16,9 +16,9 @@ export const chainNameSchema = z.union([
   z.literal("sepolia"),
   z.literal("arbitrum_sepolia"),
   z.literal("base_sepolia"),
-  z.literal("avalanche_fuji"),
   z.literal("zksync_sepolia"),
   z.literal("scroll_sepolia"),
+  z.literal("avalanche_fuji"),
   z.literal("polygon_amoy"),
 ]);
 
