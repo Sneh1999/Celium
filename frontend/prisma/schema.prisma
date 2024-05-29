@@ -74,8 +74,11 @@ model Transaction {
   value  BigInt
   data   String
 
-  isPaused      Boolean @default(false)
-  isSuccess     Boolean @default(false)
+  isPaused  Boolean @default(false)
+  isSuccess Boolean @default(false)
+  isFailed  Boolean @default(false)
+  isIgnored Boolean @default(false)
+
   twoFactorCode String?
 
   walletId Int

@@ -1,3 +1,4 @@
+import { WalletABI } from "@/abis/Wallet.abi";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -26,8 +27,11 @@ import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { SendUserOperationResponse } from "userop/dist/v06/account";
-import { encodeFunctionData, erc20Abi } from "viem";
+import {
+  BuildUserOperationResponse,
+  SendUserOperationResponse,
+} from "userop/dist/v06/account";
+import { encodeFunctionData, erc20Abi, parseEventLogs } from "viem";
 import { useWalletClient } from "wagmi";
 
 export default function TransferPage() {
@@ -35,6 +39,8 @@ export default function TransferPage() {
   const { data: walletClient } = useWalletClient();
 
   const allWallets = trpc.wallets.getWallets.useQuery();
+  const recordNewTransaction =
+    trpc.transactions.recordNewTransaction.useMutation();
 
   async function handleTransfer() {
     try {
@@ -57,11 +63,14 @@ export default function TransferPage() {
       const amount = BigInt(1e18);
       const isNativeToken = true;
 
-      let userOp: SendUserOperationResponse;
+      let target: `0x${string}` = "0x";
+      let value: bigint = BigInt(0);
+      let data: `0x${string}` = "0x";
+
       if (isNativeToken) {
-        userOp = await accountInstance
-          .encodeCallData("execute", [toAddress, amount, "0x"])
-          .sendUserOperation();
+        target = toAddress;
+        value = amount;
+        data = "0x";
       } else {
         const transferCalldata = encodeFunctionData({
           abi: erc20Abi,
@@ -69,26 +78,75 @@ export default function TransferPage() {
           args: [toAddress, amount],
         });
 
-        userOp = await accountInstance
-          .encodeCallData("execute", [
-            tokenAddress,
-            BigInt(0),
-            transferCalldata,
-          ])
-          .sendUserOperation();
+        target = tokenAddress;
+        value = BigInt(0);
+        data = transferCalldata;
       }
 
-      toast.success("Transaction broadcaster", {
+      const userOp = await accountInstance
+        .encodeCallData("execute", [target, value, data])
+        .sendUserOperation();
+
+      toast.success("Transaction broadcasted", {
         description:
           "Your transfer transaction has been broadcasted and will be processed shortly by the network.",
       });
 
-      await userOp.wait();
+      const receipt = await userOp.wait();
+      if (!receipt) {
+        await recordNewTransaction.mutateAsync({
+          target,
+          value,
+          data,
+          isPaused: false,
+          isSuccess: false,
+          isFailed: true,
+          walletId: wallet.id,
+        });
 
-      toast.success("Transaction confirmed", {
-        description:
-          "Your transfer transaction has been confirmed on the network.",
+        throw new Error("Transaction failed");
+      }
+
+      const logs = parseEventLogs({
+        abi: WalletABI,
+        logs: receipt.logs,
       });
+
+      const isTxnPaused = logs.some(
+        (log) => log.eventName === "TwoFactorAuthRequired"
+      );
+
+      if (isTxnPaused) {
+        await recordNewTransaction.mutateAsync({
+          target,
+          value,
+          data,
+          isPaused: true,
+          isSuccess: false,
+          isFailed: false,
+          walletId: wallet.id,
+        });
+
+        toast.warning("Transaction paused", {
+          description:
+            "Your transfer transaction has been paused for exceeding the allowed USD limit. You will need to approve the transaction again with the guardian.",
+        });
+      } else {
+        await recordNewTransaction.mutateAsync({
+          target,
+          value,
+          data,
+          isPaused: false,
+          isSuccess: true,
+          isFailed: false,
+          walletId: wallet.id,
+        });
+
+        toast.success("Transaction confirmed", {
+          description:
+            "Your transfer transaction has been confirmed on the network.",
+        });
+      }
     } catch (e) {
       if (e instanceof Error) {
         toast.error(e.message);
