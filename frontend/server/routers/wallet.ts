@@ -1,4 +1,8 @@
-import { chainNameSchema, getViemChainFromChainName } from "@/lib/chains";
+import {
+  ChainNamesToChainEnum,
+  chainNameSchema,
+  getViemChainFromChainName,
+} from "@/lib/chains";
 import prisma from "@/lib/db";
 import { createPublicClient, http } from "viem";
 import { readContract } from "viem/actions";
@@ -7,6 +11,28 @@ import { abi as WalletFactoryABI } from "../../../contracts/out/WalletFactory.so
 import { authedUserProcedure, router } from "../trpc";
 
 export const walletRouter = router({
+  getWallets: authedUserProcedure.query(async ({ ctx }) => {
+    const allWallets = await prisma.wallet.findMany({
+      where: {
+        ownerId: ctx.session.user.id,
+      },
+      include: {
+        _count: {
+          select: { transactions: true },
+        },
+        transactions: {
+          take: 1,
+          orderBy: {
+            createdAt: "desc",
+          },
+          select: { createdAt: true },
+        },
+      },
+    });
+
+    return allWallets;
+  }),
+
   createNewWallet: authedUserProcedure
     .input(
       z.object({
@@ -40,6 +66,7 @@ export const walletRouter = router({
           address: computedWalletAddress,
           maxUSDAmountAllowed: input.maxUSDAmountAllowed,
           isDeployed: false,
+          chain: ChainNamesToChainEnum[input.chainName],
           ownerId: ctx.session.user.id,
         },
       });

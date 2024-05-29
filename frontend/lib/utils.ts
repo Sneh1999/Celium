@@ -13,3 +13,29 @@ export function generateRandomDigits(length: number) {
   }
   return result;
 }
+
+export function getRelativeTimeString(date: Date) {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+
+  if (seconds < 60) {
+    return "a few seconds ago";
+  }
+
+  if (seconds < 60 * 60) {
+    return `${Math.floor(seconds / 60)} minutes ago`;
+  }
+
+  if (seconds < 60 * 60 * 24) {
+    return `${Math.floor(seconds / (60 * 60))} hours ago`;
+  }
+
+  if (seconds < 60 * 60 * 24 * 7) {
+    return `${Math.floor(seconds / (60 * 60 * 24))} days ago`;
+  }
+
+  if (seconds < 60 * 60 * 24 * 30) {
+    return `${Math.floor(seconds / (60 * 60 * 24 * 7))} weeks ago`;
+  }
+
+  return `${Math.floor(seconds / (60 * 60 * 24 * 30))} months ago`;
+}

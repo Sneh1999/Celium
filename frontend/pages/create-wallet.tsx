@@ -23,6 +23,8 @@ import { getServerSession } from "next-auth";
 import { useState } from "react";
 import { toast } from "sonner";
 import { getAuthOptions } from "./api/auth/[...nextauth]";
+import { useIsMounted } from "@/hooks/useIsMounted";
+import { useRouter } from "next/router";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await getServerSession(
@@ -57,6 +59,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 };
 
 export default function CreateWalletPage() {
+  const isMounted = useIsMounted();
+  const router = useRouter();
+
   const [name, setName] = useState("");
   const [maxAmountAllowed, setMaxAmountAllowed] = useState(500);
   const [chain, setChain] = useState<ChainNames>("sepolia");
@@ -83,9 +88,16 @@ export default function CreateWalletPage() {
     }
   }
 
+  if (!isMounted) return null;
+
   return (
-    <Dialog open={true}>
-      <DialogContent hideClose>
+    <Dialog
+      open={true}
+      onOpenChange={(open) => {
+        if (!open) router.push("/");
+      }}
+    >
+      <DialogContent>
         <DialogTitle>Create New Wallet</DialogTitle>
         <DialogDescription>
           Create a new smart account with Celium.

@@ -20,6 +20,7 @@ import { getServerSession } from "next-auth";
 import { useState } from "react";
 import { toast } from "sonner";
 import { getAuthOptions } from "./api/auth/[...nextauth]";
+import { useIsMounted } from "@/hooks/useIsMounted";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await getServerSession(
@@ -54,6 +55,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 };
 
 export default function LinkEmailPage() {
+  const isMounted = useIsMounted();
+
   const [email, setEmail] = useState("");
   const [sentEmail, setSentEmail] = useState(false);
   const [token, setToken] = useState("");
@@ -98,6 +101,8 @@ export default function LinkEmailPage() {
       });
     }
   }
+
+  if (!isMounted) return null;
 
   return (
     <Dialog open={true}>

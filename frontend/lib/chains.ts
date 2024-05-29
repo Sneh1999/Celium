@@ -1,3 +1,4 @@
+import { Chain } from "@prisma/client";
 import { anvil, arbitrumSepolia, sepolia } from "viem/chains";
 import { z } from "zod";
 
@@ -9,16 +10,16 @@ export const chainNameSchema = z.union([
 
 export type ChainNames = z.infer<typeof chainNameSchema>;
 
-export function getViemChainFromChainName(chainName: ChainNames) {
-  if (chainName === "anvil") {
+export function getViemChainFromChainName(chainName: ChainNames | Chain) {
+  if (chainName === "anvil" || chainName === "ANVIL") {
     return anvil;
   }
 
-  if (chainName === "sepolia") {
+  if (chainName === "sepolia" || chainName === "SEPOLIA") {
     return sepolia;
   }
 
-  if (chainName === "arbitrum_sepolia") {
+  if (chainName === "arbitrum_sepolia" || chainName === "ARBITRUM_SEPOLIA") {
     return arbitrumSepolia;
   }
 
@@ -48,3 +49,9 @@ export const ChainData: {
     imageUrl: "https://cryptologos.cc/logos/arbitrum-arb-logo.svg?v=032",
   },
 ];
+
+export const ChainNamesToChainEnum: Record<ChainNames, Chain> = {
+  anvil: Chain.ANVIL,
+  sepolia: Chain.SEPOLIA,
+  arbitrum_sepolia: Chain.ARBITRUM_SEPOLIA,
+};
