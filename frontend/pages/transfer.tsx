@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { useSendUserOp } from "@/hooks/useSendUserOp";
 import { ChainData, ChainNames } from "@/lib/chains";
 import { TokensByChain } from "@/lib/tokens";
 import { trpc } from "@/lib/trpc";
@@ -27,20 +28,15 @@ import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { toast } from "sonner";
-import {
-  BuildUserOperationResponse,
-  SendUserOperationResponse,
-} from "userop/dist/v06/account";
 import { encodeFunctionData, erc20Abi, parseEventLogs } from "viem";
 import { useWalletClient } from "wagmi";
 
 export default function TransferPage() {
   const { data: session } = useSession();
   const { data: walletClient } = useWalletClient();
+  const { handleUserOp } = useSendUserOp();
 
   const allWallets = trpc.wallets.getWallets.useQuery();
-  const recordNewTransaction =
-    trpc.transactions.recordNewTransaction.useMutation();
 
   async function handleTransfer() {
     try {
@@ -58,6 +54,7 @@ export default function TransferPage() {
         usePaymaster: false,
       });
 
+      // TODO: REMOVE
       const tokenAddress = "0xf99F35d284675D594Cf0dda5C7B8979Df947e134";
       const toAddress = "0xf99F35d284675D594Cf0dda5C7B8979Df947e134";
       const amount = BigInt(1e18);
@@ -83,70 +80,14 @@ export default function TransferPage() {
         data = transferCalldata;
       }
 
-      const userOp = await accountInstance
-        .encodeCallData("execute", [target, value, data])
-        .sendUserOperation();
-
-      toast.success("Transaction broadcasted", {
-        description:
-          "Your transfer transaction has been broadcasted and will be processed shortly by the network.",
+      await handleUserOp({
+        accountInstance,
+        walletFn: "execute",
+        walletId: wallet.id,
+        target,
+        value,
+        data,
       });
-
-      const receipt = await userOp.wait();
-      if (!receipt) {
-        await recordNewTransaction.mutateAsync({
-          target,
-          value,
-          data,
-          isPaused: false,
-          isSuccess: false,
-          isFailed: true,
-          walletId: wallet.id,
-        });
-
-        throw new Error("Transaction failed");
-      }
-
-      const logs = parseEventLogs({
-        abi: WalletABI,
-        logs: receipt.logs,
-      });
-
-      const isTxnPaused = logs.some(
-        (log) => log.eventName === "TwoFactorAuthRequired"
-      );
-
-      if (isTxnPaused) {
-        await recordNewTransaction.mutateAsync({
-          target,
-          value,
-          data,
-          isPaused: true,
-          isSuccess: false,
-          isFailed: false,
-          walletId: wallet.id,
-        });
-
-        toast.warning("Transaction paused", {
-          description:
-            "Your transfer transaction has been paused for exceeding the allowed USD limit. You will need to approve the transaction again with the guardian.",
-        });
-      } else {
-        await recordNewTransaction.mutateAsync({
-          target,
-          value,
-          data,
-          isPaused: false,
-          isSuccess: true,
-          isFailed: false,
-          walletId: wallet.id,
-        });
-
-        toast.success("Transaction confirmed", {
-          description:
-            "Your transfer transaction has been confirmed on the network.",
-        });
-      }
     } catch (e) {
       if (e instanceof Error) {
         toast.error(e.message);
