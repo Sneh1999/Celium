@@ -3,9 +3,10 @@ import prisma from "@/lib/db";
 import { createPublicClient, http } from "viem";
 import { readContract } from "viem/actions";
 import { z } from "zod";
-import { abi as WalletFactoryABI } from "../../../contracts/out/WalletFactory.sol/WalletFactory.json" assert { type: "json" };
 import { authedUserProcedure, router } from "../trpc";
 import { Chain } from "@prisma/client";
+import { ContractAddressesByChain } from "@/lib/contracts";
+import { WalletFactoryABI } from "@/abis/WalletFactory.abi";
 
 export const walletRouter = router({
   getWallets: authedUserProcedure.query(async ({ ctx }) => {
@@ -45,15 +46,18 @@ export const walletRouter = router({
         transport: http(),
       });
 
+      const factoryAddress =
+        ContractAddressesByChain[input.chainName].factoryAddress;
+
       const computedWalletAddress = (await readContract(publicClient, {
-        address: process.env.NEXT_PUBLIC_WALLET_FACTORY_ADDRESS,
+        address: factoryAddress,
         abi: WalletFactoryABI,
         functionName: "getAddress",
         args: [
-          ctx.session.user.address,
+          ctx.session.user.address as `0x${string}`,
           process.env.NEXT_PUBLIC_GUARDIAN_ADDRESS,
-          0,
-          input.maxUSDAmountAllowed,
+          BigInt(0),
+          BigInt(input.maxUSDAmountAllowed),
         ],
       })) as string;
 

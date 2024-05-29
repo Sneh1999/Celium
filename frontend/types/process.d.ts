@@ -6,8 +6,6 @@ declare namespace NodeJS {
     NEXTAUTH_SECRET: string;
 
     GUARDIAN_PRIVATE_KEY: string;
-    NEXT_PUBLIC_GUARDIAN_ADDRESS: string;
-
-    NEXT_PUBLIC_WALLET_FACTORY_ADDRESS: `0x${string}`;
+    NEXT_PUBLIC_GUARDIAN_ADDRESS: `0x${string}`;
   }
 }
