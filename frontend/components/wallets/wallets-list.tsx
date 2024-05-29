@@ -1,6 +1,8 @@
-import { Button } from "../ui/button";
+import Link from "next/link";
+import { Button, buttonVariants } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { WalletItem } from "./wallet-item";
+import { cn } from "@/lib/utils";
 
 export function WalletsList() {
   return (
@@ -8,7 +10,12 @@ export function WalletsList() {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           Your Wallets
-          <Button variant="secondary">Create New</Button>
+          <Link
+            href="/create-wallet"
+            className={cn(buttonVariants({ variant: "secondary" }))}
+          >
+            Create New
+          </Link>
         </CardTitle>
       </CardHeader>
       <CardContent className="h-96 overflow-auto hover:overflow-y-scroll">

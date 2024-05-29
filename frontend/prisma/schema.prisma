@@ -38,8 +38,10 @@ model EmailVerificationToken {
 model Wallet {
   id Int @id @default(autoincrement())
 
-  name    String
-  address String @unique
+  name                String
+  address             String  @unique
+  maxUSDAmountAllowed Int
+  isDeployed          Boolean @default(false)
 
   ownerId Int
   owner   User @relation(fields: [ownerId], references: [id])

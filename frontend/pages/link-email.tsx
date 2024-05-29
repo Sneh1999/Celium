@@ -14,13 +14,12 @@ import {
 } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
+import { TRPCError } from "@trpc/server";
 import { GetServerSideProps } from "next";
 import { getServerSession } from "next-auth";
-import { useSession } from "next-auth/react";
 import { useState } from "react";
-import { getAuthOptions } from "./api/auth/[...nextauth]";
-import { TRPCError } from "@trpc/server";
 import { toast } from "sonner";
+import { getAuthOptions } from "./api/auth/[...nextauth]";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await getServerSession(
@@ -59,8 +58,9 @@ export default function LinkEmailPage() {
   const [sentEmail, setSentEmail] = useState(false);
   const [token, setToken] = useState("");
 
-  const linkEmailRequest = trpc.linkEmailRequest.useMutation();
-  const verifyLinkEmailRequest = trpc.verifyLinkEmailRequest.useMutation();
+  const linkEmailRequest = trpc.linkEmail.linkEmailRequest.useMutation();
+  const verifyLinkEmailRequest =
+    trpc.linkEmail.verifyLinkEmailRequest.useMutation();
 
   async function handleSubmit() {
     try {
