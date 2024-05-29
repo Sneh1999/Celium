@@ -1,4 +1,3 @@
-import { WalletABI } from "@/abis/Wallet.abi";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -28,7 +27,7 @@ import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { encodeFunctionData, erc20Abi, parseEventLogs } from "viem";
+import { encodeFunctionData, erc20Abi } from "viem";
 import { useWalletClient } from "wagmi";
 
 export default function TransferPage() {

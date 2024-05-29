@@ -73,6 +73,7 @@ model Transaction {
   target String
   value  BigInt
   data   String
+  nonce  BigInt
 
   isPaused  Boolean @default(false)
   isSuccess Boolean @default(false)
@@ -86,4 +87,6 @@ model Transaction {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([walletId, nonce])
 }

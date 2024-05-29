@@ -2,6 +2,7 @@ import { WalletABI } from "@/abis/Wallet.abi";
 import { trpc } from "@/lib/trpc";
 import { getAccountInstance } from "@/lib/userop";
 import { toast } from "sonner";
+import { Account } from "userop/dist/v06";
 import { parseEventLogs } from "viem";
 
 interface HandleUserOpOpts {
@@ -18,6 +19,8 @@ export function useSendUserOp() {
     trpc.transactions.recordNewTransaction.useMutation();
 
   async function handleUserOp(opts: HandleUserOpOpts) {
+    const walletNonce = await opts.accountInstance.getNonce();
+
     const userOp = await opts.accountInstance
       .encodeCallData(opts.walletFn, [opts.target, opts.value, opts.data])
       .sendUserOperation();
@@ -33,6 +36,7 @@ export function useSendUserOp() {
         target: opts.target,
         value: opts.value,
         data: opts.data,
+        nonce: walletNonce,
         isPaused: false,
         isSuccess: false,
         isFailed: true,
@@ -56,6 +60,7 @@ export function useSendUserOp() {
         target: opts.target,
         value: opts.value,
         data: opts.data,
+        nonce: walletNonce,
         isPaused: true,
         isSuccess: false,
         isFailed: false,
@@ -71,6 +76,7 @@ export function useSendUserOp() {
         target: opts.target,
         value: opts.value,
         data: opts.data,
+        nonce: walletNonce,
         isPaused: false,
         isSuccess: true,
         isFailed: false,
