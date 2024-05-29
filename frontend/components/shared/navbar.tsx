@@ -29,11 +29,15 @@ export function Navbar() {
             href="/bridge"
             className="font-medium text-sm h-full border-b transition-all duration-300 border-transparent hover:border-muted-foreground"
           >
-            Bridge
+            CCIP Bridge
           </Link>
         </div>
         <div className="flex-1 flex justify-end">
-          <div className="flex items-center">
+          <div className="flex items-center gap-4">
+            <div className="rounded-sm bg-gradient-to-tr from-gray-500 to-gray-800 px-2 py-1">
+              2,121,223 Points
+            </div>
+
             <SignInWithEthereum />
           </div>
         </div>

@@ -23,15 +23,16 @@ import { TokensByChain } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-export default function TransferPage() {
-  async function handleTransfer() {}
+export default function BridgePage() {
+  async function handleBridge() {}
+
   return (
     <div className="max-w-xl mx-auto mt-20">
       <Card>
         <CardHeader>
-          <CardTitle>Transfer</CardTitle>
+          <CardTitle>Bridge</CardTitle>
           <CardDescription>
-            Transfer your tokens between wallets or to other addresses
+            Bridge your tokens between different chains
           </CardDescription>
         </CardHeader>
 
@@ -99,14 +100,32 @@ export default function TransferPage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="recipient">Recipient</Label>
-
-            <Input
-              type="text"
-              id="recipient"
-              name="recipient"
-              placeholder="0x..."
-            />
+            <Label htmlFor="chain">Destination Chain</Label>
+            <Select
+              name="chain"
+              // value={chain}
+              // onValueChange={(v) => setChain(v as ChainNames)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select Chain" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {ChainData.map((chain) => (
+                    <SelectItem key={chain.chainName} value={chain.chainName}>
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={chain.imageUrl}
+                          alt={chain.fullName}
+                          className="h-5 w-5"
+                        />
+                        {chain.fullName}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex items-center justify-between">
@@ -128,7 +147,7 @@ export default function TransferPage() {
           >
             Cancel
           </Link>
-          <Button onClick={handleTransfer} variant="secondary">
+          <Button onClick={handleBridge} variant="secondary">
             Transfer
           </Button>
         </CardFooter>
