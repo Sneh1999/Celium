@@ -45,6 +45,7 @@ contract Wallet is BaseAccount, Initializable {
     error NotEntrypointOrFactory();
     error InvalidPausedTransactionNonce();
     error GuardianSignatureVerificationFailed();
+    error NotSelf();
     error InvalidReceiverAddress(); // Used when the receiver address is 0.
 
     // Structs
@@ -65,6 +66,9 @@ contract Wallet is BaseAccount, Initializable {
 
     bytes4 private constant TRANSFER_SELECTOR = bytes4(keccak256("transfer(address,uint256)"));
     bytes4 private constant APPROVE_SELECTOR = bytes4(keccak256("approve(address,uint256)"));
+    bytes4 private constant SWAP_AND_BRIDGE_SELECTOR =
+        bytes4(keccak256("swapAndBridge(address,uint256,address,uint256,bytes,uint64)"));
+    bytes4 private constant BRIDGE_SELECTOR = bytes4(keccak256("bridge(address,uint256,uint64)"));
     uint256 lastUsedPausedNonce;
     uint256 maxTransferAllowedWithoutAuthUSD;
     address public owner;
@@ -79,6 +83,11 @@ contract Wallet is BaseAccount, Initializable {
     // Modifiers
     modifier _requireFromEntryPointOrFactory() {
         if (msg.sender != address(_entryPoint) && msg.sender != _walletFactory) revert NotEntrypointOrFactory();
+        _;
+    }
+
+    modifier _requireFromSelf() {
+        if (msg.sender != address(this)) revert NotSelf();
         _;
     }
 
@@ -138,12 +147,12 @@ contract Wallet is BaseAccount, Initializable {
 
     function swapAndBridge(
         address tokenIn,
-        address tokenOut,
         uint256 amountIn,
+        address tokenOut,
         uint256 amountOutMin,
         bytes memory path,
         uint64 _destinationChainSelector
-    ) public _requireFromEntryPointOrFactory returns (bytes32) {
+    ) public _requireFromSelf returns (bytes32) {
         ERC20(tokenIn).transfer(address(universalRouter), amountIn);
 
         uint256 balanceBefore = ERC20(tokenOut).balanceOf(address(this));
@@ -160,6 +169,14 @@ contract Wallet is BaseAccount, Initializable {
         return messageId;
     }
 
+    function bridge(address token, uint256 amount, uint64 _destinationChainSelector)
+        public
+        _requireFromSelf
+        returns (bytes32)
+    {
+        return _transferTokensPayNative(_destinationChainSelector, address(this), token, amount);
+    }
+
     function addDeposit() public payable {
         _entryPoint.depositTo{value: msg.value}(address(this));
     }
@@ -169,41 +186,70 @@ contract Wallet is BaseAccount, Initializable {
         bytes4 selector;
         uint256 tokenPrice;
         uint256 amount;
-        string[] memory args = new string[](1);
-        args[0] = Strings.toHexString(msg.sender);
+        string[] memory args = new string[](4);
 
-        assembly {
-            selector := mload(add(data, 32))
-        }
-        if (selector != TRANSFER_SELECTOR && selector != APPROVE_SELECTOR) return false;
-        assembly {
-            // Skip 32 + 4 + 32 (length + func sig + address)
-            amount := mload(add(data, 68))
+        // TODO
+        // if (value / 10 ** 18 > maxTransferAllowedWithoutAuthUSD) {
+        //     return false;
+        // }
+
+        if (data.length > 0) {
+            assembly {
+                selector := mload(add(data, 32))
+            }
+            if (
+                selector != TRANSFER_SELECTOR && selector != APPROVE_SELECTOR && selector != BRIDGE_SELECTOR
+                    && selector != SWAP_AND_BRIDGE_SELECTOR
+            ) {
+                return false;
+            }
+
+            assembly {
+                // Skip 32 + 4 + 32 (length + func sig + address)
+                amount := mload(add(data, 68))
+            }
         }
 
-        if (feedsRegistry.feeds(target) == zero) {
+        return _twoFactorRequiredERC20(target, amount, value, data);
+    }
+
+    function _twoFactorRequiredERC20(address token, uint256 amount, uint256 value, bytes memory data)
+        internal
+        returns (bool)
+    {
+        uint256 tokenPrice;
+        string[] memory args = new string[](4);
+
+        if (feedsRegistry.feeds(token) == zero) {
             return false;
         }
 
-        dataFeed = AggregatorV3Interface(feedsRegistry.feeds(target));
+        dataFeed = AggregatorV3Interface(feedsRegistry.feeds(token));
         try dataFeed.latestRoundData() returns (uint80, int256 answer, uint256, uint256, uint80) {
             tokenPrice = uint256(answer);
         } catch {
-            emit ChainlinkDataFeedNotFound(target);
+            emit ChainlinkDataFeedNotFound(token);
             return false;
         }
 
-        uint8 tokenDecimals = ERC20(target).decimals();
+        uint8 tokenDecimals = ERC20(token).decimals();
 
         if ((amount * tokenPrice) / (10 ** (tokenDecimals + dataFeed.decimals())) < maxTransferAllowedWithoutAuthUSD) {
             return false;
         }
+
         unchecked {
             lastUsedPausedNonce++;
         }
         emit TwoFactorAuthRequired(lastUsedPausedNonce);
 
+        args[0] = Strings.toHexString(address(this));
+        args[1] = Strings.toHexString(lastUsedPausedNonce);
+        args[2] = Strings.toHexString(_entryPoint.getNonce(address(this), 0));
+        args[3] = Strings.toHexString(block.chainid);
+
         pausedTransactions[lastUsedPausedNonce] = Transaction({data: data, value: value, target: target});
+
         consumer.sendRequest(subscriptionId, args);
         return true;
     }
@@ -214,7 +260,6 @@ contract Wallet is BaseAccount, Initializable {
         override
         returns (uint256)
     {
-        // bytes32 hash = userOpHash.toEthSignedMessageHash();
         if (owner == userOpHash.recover(userOp.signature)) {
             return 0;
         }

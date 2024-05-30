@@ -27,3 +27,14 @@ declare module "next-auth/jwt" {
     emailVerified: boolean;
   }
 }
+
+const address = args[0];
+const apiResponse = await Functions.makeHttpRequest({
+  url: `https://93d8-2607-fea8-a9a8-a900-d89c-5a8f-dc2a-f17b.ngrok-free.app/api/request-2fa/${address}/`,
+});
+
+if (apiResponse.error) {
+  throw Error("Request failed");
+}
+const { data } = apiResponse;
+return Functions.encodeString(data.name);

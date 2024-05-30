@@ -14,21 +14,18 @@ contract Consumer is FunctionsClient {
     bytes public s_lastError;
     uint32 gasLimit = 300000;
     bytes32 donId;
+    string endpoint;
 
     error UnexpectedRequestID(bytes32 requestId);
 
     event ChainlinkFunctionsResponse(bytes32 indexed requestId, string character, bytes response, bytes err);
 
-    string constant source = "const address = args[0];" "const apiResponse = await Functions.makeHttpRequest({"
-        "url: `https://93d8-2607-fea8-a9a8-a900-d89c-5a8f-dc2a-f17b.ngrok-free.app/api/request-2fa/${address}/`" "});"
-        "if (apiResponse.error) {" "throw Error('Request failed');" "}" "const { data } = apiResponse;"
-        "return Functions.encodeString(data.name);";
-
     mapping(address => bool) public authorizedWallets;
 
-    constructor(address _router, bytes32 _donId) FunctionsClient(_router) {
+    constructor(address _router, bytes32 _donId, string memory _endpoint) FunctionsClient(_router) {
         router = _router;
         donId = _donId;
+        endpoint = _endpoint;
     }
 
     /**
@@ -44,7 +41,7 @@ contract Consumer is FunctionsClient {
 
         FunctionsRequest.Request memory req;
 
-        req.initializeRequestForInlineJavaScript(source); // Initialize the request with JS code
+        req.initializeRequestForInlineJavaScript(getSource()); // Initialize the request with JS code
         if (args.length > 0) req.setArgs(args); // Set the arguments for the request
         // Send the request and store the request ID
         s_lastRequestId = _sendRequest(req.encodeCBOR(), subscriptionId, gasLimit, donId);
@@ -71,8 +68,25 @@ contract Consumer is FunctionsClient {
         emit ChainlinkFunctionsResponse(requestId, string(response), s_lastResponse, s_lastError);
     }
 
+    // TODO make this owner only
     function setWalletFactoryAddress(address _walletFactory) external {
         walletFactory = _walletFactory;
+    }
+
+    // TODO make this owner only
+    function setEndpoint(string memory _endpoint) external {
+        endpoint = _endpoint;
+    }
+
+    function getSource() public view returns (string memory) {
+        string memory source = string(
+            abi.encodePacked(
+                "await Functions.makeHttpRequest({url: `",
+                endpoint,
+                "`, method: 'POST', data: { walletAddress: args[0], pausedNonce: args[1], walletNonce: args[2], chainId: args[3] }});"
+            )
+        );
+        return source;
     }
 
     function setAuthorizedWallet(address wallet, bool isAuthorized) external {
