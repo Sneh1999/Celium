@@ -73,7 +73,6 @@ contract Consumer is FunctionsClient {
         walletFactory = _walletFactory;
     }
 
-    // TODO make this owner only
     function setEndpoint(string memory _endpoint) external {
         endpoint = _endpoint;
     }

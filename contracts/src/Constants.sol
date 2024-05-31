@@ -13,7 +13,7 @@ abstract contract Constants {
 
     // Our Contracts
     FeedsRegistry FEEDS_REGISTRY = FeedsRegistry(0x0B7f332ECeF4141B6eb314C96363E777D1Ede2a4);
-    Consumer FUNCTIONS_CONSUMER = Consumer(0xf99F35d284675D594Cf0dda5C7B8979Df947e134);
+    Consumer FUNCTIONS_CONSUMER = Consumer(0x15cD88eACB1E189a83Ed4D3d20233718b72FBCa9);
 
     // External Contracts
     EntryPoint ENTRYPOINT = EntryPoint(payable(0xcAc30D6Dc9bEED0D31699c059ceD50d0b8279aeF));
@@ -33,4 +33,7 @@ abstract contract Constants {
     // RPC URLs
     string ETHEREUM_SEPOLIA_RPC_URL = "https://rpc.ankr.com/eth_sepolia";
     string ARBITRUM_SEPOLIA_RPC_URL = "https://sepolia-rollup.arbitrum.io/rpc";
+
+    address  ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    uint8 NATIVE_TOKEN_DECIMALS = 18;
 }

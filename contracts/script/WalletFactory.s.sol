@@ -52,6 +52,8 @@ contract WalletFactoryScript is Script {
     WalletFactory walletFactory;
     Wallet wallet;
     Consumer functionsConsumer = Consumer(0xf99F35d284675D594Cf0dda5C7B8979Df947e134);
+    address ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    uint8 NATIVE_TOKEN_DECIMALS = 18;
 
     function run() public {
         vm.startBroadcast(ownerPrivateKey);
@@ -62,7 +64,9 @@ contract WalletFactoryScript is Script {
             address(functionsConsumer),
             uniswapRouter,
             ccipRouter,
-            subscriptionId
+            subscriptionId,
+            ETH,
+            NATIVE_TOKEN_DECIMALS
         );
         assert(address(walletFactory.consumer()) == address(functionsConsumer));
         functionsConsumer.setWalletFactoryAddress(address(walletFactory));

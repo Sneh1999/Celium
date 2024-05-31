@@ -18,10 +18,21 @@ contract WalletFactory {
         address _consumer,
         address _universalRouter,
         address ccipRouter,
-        uint64 subscriptionId
+        uint64 subscriptionId,
+        address _native,
+        uint8 _nativeTokenDecimals
     ) {
-        walletImplementation =
-            new Wallet(entryPoint, address(this), feedsRegistry, _consumer, _universalRouter, ccipRouter, subscriptionId);
+        walletImplementation = new Wallet(
+            entryPoint,
+            address(this),
+            feedsRegistry,
+            _consumer,
+            _universalRouter,
+            ccipRouter,
+            subscriptionId,
+            _native,
+            _nativeTokenDecimals
+        );
         consumer = Consumer(_consumer);
     }
 

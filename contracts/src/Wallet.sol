@@ -75,6 +75,8 @@ contract Wallet is BaseAccount, Initializable {
     address public guardian;
     address zero;
     uint64 immutable subscriptionId;
+    address native;
+    uint8 nativeTokenDecimals;
 
     mapping(uint256 nonce => Transaction txn) public pausedTransactions;
 
@@ -102,18 +104,20 @@ contract Wallet is BaseAccount, Initializable {
         address _feedsRegistry,
         address _consumer,
         address _universalRouter,
-        // address _permit2,
         address ccipRouter,
-        uint64 _subscriptionId
+        uint64 _subscriptionId,
+        address _native,
+        uint8 _nativeTokenDecimals
     ) {
         _entryPoint = anEntryPoint;
         _walletFactory = ourWalletFactory;
         consumer = Consumer(_consumer);
         universalRouter = IUniversalRouter(_universalRouter);
-        // permit2 = Permit2(_permit2);
         s_router = IRouterClient(ccipRouter);
         feedsRegistry = FeedsRegistry(_feedsRegistry);
         subscriptionId = _subscriptionId;
+        native = _native;
+        nativeTokenDecimals = _nativeTokenDecimals;
     }
 
     function initialize(address _owner, address _guardian, uint256 _maxAmountAllowed) public initializer {
@@ -125,7 +129,7 @@ contract Wallet is BaseAccount, Initializable {
     }
 
     function execute(address target, uint256 value, bytes calldata data) external _requireFromEntryPointOrFactory {
-        bool is2FARequired = _twoFactorRequired(target, value, data);
+        bool is2FARequired = twoFactorRequired(target, value, data);
 
         if (!is2FARequired) {
             _call(target, value, data);
@@ -182,18 +186,14 @@ contract Wallet is BaseAccount, Initializable {
     }
 
     // Internal Functions
-    function _twoFactorRequired(address target, uint256 value, bytes memory data) internal returns (bool) {
+    function twoFactorRequired(address target, uint256 value, bytes memory data) internal returns (bool) {
         bytes4 selector;
-        uint256 tokenPrice;
         uint256 amount;
-        string[] memory args = new string[](4);
 
-        // TODO
-        // if (value / 10 ** 18 > maxTransferAllowedWithoutAuthUSD) {
-        //     return false;
-        // }
-
-        if (data.length > 0) {
+        // Native token transfer
+        if (data.length == 0) {
+            return _twoFactorRequired(native, amount, target, value, data);
+        } else {
             assembly {
                 selector := mload(add(data, 32))
             }
@@ -208,12 +208,11 @@ contract Wallet is BaseAccount, Initializable {
                 // Skip 32 + 4 + 32 (length + func sig + address)
                 amount := mload(add(data, 68))
             }
+            return _twoFactorRequired(target, amount, target, value, data);
         }
-
-        return _twoFactorRequiredERC20(target, amount, value, data);
     }
 
-    function _twoFactorRequiredERC20(address token, uint256 amount, uint256 value, bytes memory data)
+    function _twoFactorRequired(address token, uint256 amount, address target, uint256 value, bytes memory data)
         internal
         returns (bool)
     {
@@ -232,7 +231,13 @@ contract Wallet is BaseAccount, Initializable {
             return false;
         }
 
-        uint8 tokenDecimals = ERC20(token).decimals();
+        uint8 tokenDecimals;
+
+        if (token == native) {
+            tokenDecimals = nativeTokenDecimals;
+        } else {
+            tokenDecimals = ERC20(token).decimals();
+        }
 
         if ((amount * tokenPrice) / (10 ** (tokenDecimals + dataFeed.decimals())) < maxTransferAllowedWithoutAuthUSD) {
             return false;
@@ -241,6 +246,7 @@ contract Wallet is BaseAccount, Initializable {
         unchecked {
             lastUsedPausedNonce++;
         }
+
         emit TwoFactorAuthRequired(lastUsedPausedNonce);
 
         args[0] = Strings.toHexString(address(this));

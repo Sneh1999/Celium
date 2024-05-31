@@ -75,7 +75,9 @@ contract WalletFactoryTest is Test, Constants {
             address(FUNCTIONS_CONSUMER),
             UNISWAP_UNIVERSAL_ROUTER,
             CCIP_ROUTER,
-            CF_SUBSCRIPTION_ID
+            CF_SUBSCRIPTION_ID,
+            ETH,
+            NATIVE_TOKEN_DECIMALS
         );
 
         FUNCTIONS_CONSUMER.setWalletFactoryAddress(address(walletFactory));

@@ -9,10 +9,11 @@ contract ConsumerScript is Script {
     address owner = vm.addr(ownerPrivateKey);
     address router = 0xb83E47C2bC239B3bf370bc41e1459A34b41238D0;
     bytes32 donID = 0x66756e2d657468657265756d2d7365706f6c69612d3100000000000000000000;
+    string endpoint = "https://celium.com/api";
 
     function run() public {
         vm.startBroadcast(ownerPrivateKey);
-        Consumer consumer = new Consumer(router, donID);
+        Consumer consumer = new Consumer(router, donID, endpoint);
         vm.stopBroadcast();
         console2.log("Consumer ", address(consumer));
     }
