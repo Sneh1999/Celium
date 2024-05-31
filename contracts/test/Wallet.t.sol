@@ -35,9 +35,12 @@ contract WalletFactoryTest is Test, Constants {
         0x635A86F9fdD16Ff09A0701C305D3a845F1758b8E,
         0xc59E3633BAAC79493d908e63626716e204A45EdF,
         0xc0F82A46033b8BdBA4Bb0B0e28Bc2006F64355bC,
-        0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E
+        0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E,
+        0x694AA1769357215DE4FAC081bf1f309aDC325306,
+        0x694AA1769357215DE4FAC081bf1f309aDC325306
     ];
     address[] tokens = [
+        // DAI
         0x68194a729C2450ad26072b3D33ADaCbcef39D574,
         // GHO
         0x5d00fab5f2F97C4D682C1053cDCAA59c2c37900D,
@@ -46,7 +49,11 @@ contract WalletFactoryTest is Test, Constants {
         // SNX
         0x236f697c518b7AEc0bb227d8B7547b3c27cA29bc,
         // USDC
-        0xf08A50178dfcDe18524640EA6618a1f965821715
+        0xf08A50178dfcDe18524640EA6618a1f965821715,
+        // WETH
+        0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14,
+        // ETH
+        0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE
     ];
     address createdWalletAddress;
     address internal owner;
@@ -167,7 +174,7 @@ contract WalletFactoryTest is Test, Constants {
         assertEq(allowance, uint256(1e6));
     }
 
-    // TEST CCIP and Uniswap
+    // // TEST CCIP and Uniswap
     function test_swapAndBridgeTokens() public {
         Register.NetworkDetails memory sepoliaNetworkDetails = ccipLocalSimulatorFork.getNetworkDetails(block.chainid);
         BurnMintERC677Helper ccipBnM = BurnMintERC677Helper(sepoliaNetworkDetails.ccipBnMAddress);
@@ -181,11 +188,34 @@ contract WalletFactoryTest is Test, Constants {
         bytes memory path = abi.encodePacked(address(WETH), uint24(3000), address(ccipBnM));
 
         bytes memory swapAndBridgeCalldata = abi.encodeWithSelector(
-            Wallet.swapAndBridge.selector, WETH, address(ccipBnM), 0.0001 ether, 0, path, ARB_SEPOLIA_CHAIN_SELECTOR
+            Wallet.swapAndBridge.selector,
+            address(WETH),
+            0.1 ether,
+            address(ccipBnM),
+            0,
+            path,
+            ARB_SEPOLIA_CHAIN_SELECTOR
         );
 
-        (PackedUserOperation memory swapAndBridgeCalldataOp,) = _getUserOp(swapAndBridgeCalldata, "", false);
+        bytes memory transactionCalldata =
+            abi.encodeWithSelector(Wallet.execute.selector, address(wallet), 0, swapAndBridgeCalldata);
+
+        (PackedUserOperation memory swapAndBridgeCalldataOp,) = _getUserOp(transactionCalldata, "", false);
         _handleOp(swapAndBridgeCalldataOp);
+
+        (address target, uint256 value, bytes memory data) = wallet.pausedTransactions(1);
+        Transaction memory txn = Transaction(target, value, data);
+
+        bytes32 digest = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encode(txn))));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guardianPrivateKey, digest);
+
+        uint256 nonce = 1;
+        bytes memory approveTransactionCalldata =
+            abi.encodeWithSelector(Wallet.approveTransaction.selector, nonce, abi.encodePacked(r, s, v));
+
+        (PackedUserOperation memory approveTransactionOp,) = _getUserOp(approveTransactionCalldata, "", false);
+        _handleOp(approveTransactionOp);
         ccipLocalSimulatorFork.switchChainAndRouteMessage(arbSepoliaFork);
 
         Register.NetworkDetails memory arbSepoliaNetworkDetails =
@@ -193,6 +223,71 @@ contract WalletFactoryTest is Test, Constants {
         BurnMintERC677Helper ccipBnMArbSepolia = BurnMintERC677Helper(arbSepoliaNetworkDetails.ccipBnMAddress);
 
         assertEq(ccipBnMArbSepolia.balanceOf(createdWalletAddress) > 0, true);
+    }
+
+    // test brige
+
+    function test_bridgeTokens() public {
+        Register.NetworkDetails memory sepoliaNetworkDetails = ccipLocalSimulatorFork.getNetworkDetails(block.chainid);
+        BurnMintERC677Helper ccipBnM = BurnMintERC677Helper(sepoliaNetworkDetails.ccipBnMAddress);
+        ccipBnM.drip(createdWalletAddress);
+
+        bytes memory bridgeCalldata =
+            abi.encodeWithSelector(Wallet.bridge.selector, address(ccipBnM), 0.0001 ether, ARB_SEPOLIA_CHAIN_SELECTOR);
+
+        bytes memory transactionCalldata =
+            abi.encodeWithSelector(Wallet.execute.selector, address(wallet), 0, bridgeCalldata);
+
+        (PackedUserOperation memory bridgeCalldataOp,) = _getUserOp(transactionCalldata, "", false);
+        _handleOp(bridgeCalldataOp);
+
+        (address target, uint256 value, bytes memory data) = wallet.pausedTransactions(1);
+        Transaction memory txn = Transaction(target, value, data);
+
+        bytes32 digest = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encode(txn))));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guardianPrivateKey, digest);
+
+        uint256 nonce = 1;
+        bytes memory approveTransactionCalldata =
+            abi.encodeWithSelector(Wallet.approveTransaction.selector, nonce, abi.encodePacked(r, s, v));
+
+        (PackedUserOperation memory approveTransactionOp,) = _getUserOp(approveTransactionCalldata, "", false);
+        _handleOp(approveTransactionOp);
+
+        ccipLocalSimulatorFork.switchChainAndRouteMessage(arbSepoliaFork);
+
+        Register.NetworkDetails memory arbSepoliaNetworkDetails =
+            ccipLocalSimulatorFork.getNetworkDetails(block.chainid);
+        BurnMintERC677Helper ccipBnMArbSepolia = BurnMintERC677Helper(arbSepoliaNetworkDetails.ccipBnMAddress);
+
+        assertEq(ccipBnMArbSepolia.balanceOf(createdWalletAddress) > 0, true);
+    }
+
+    // native tokens also get blocked
+
+    function test_nativeTokenTransferBlocks() public {
+        bytes memory transactionCalldata =
+            abi.encodeWithSelector(Wallet.execute.selector, address(guardian), 1 ether, "");
+
+        (PackedUserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
+        _handleOp(userOp);
+        (address target, uint256 value, bytes memory data) = wallet.pausedTransactions(1);
+        Transaction memory txn = Transaction(target, value, data);
+
+        bytes32 digest = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encode(txn))));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guardianPrivateKey, digest);
+
+        uint256 nonce = 1;
+        bytes memory approveTransactionCalldata =
+            abi.encodeWithSelector(Wallet.approveTransaction.selector, nonce, abi.encodePacked(r, s, v));
+
+        (PackedUserOperation memory approveTransactionOp,) = _getUserOp(approveTransactionCalldata, "", false);
+        _handleOp(approveTransactionOp);
+
+        uint256 balance = address(guardian).balance;
+        assertEq(balance, 1 ether);
     }
 
     // Internals

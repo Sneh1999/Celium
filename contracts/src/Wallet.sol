@@ -63,6 +63,8 @@ contract Wallet is BaseAccount, Initializable {
     IRouterClient private immutable s_router;
     // Permit2 private immutable permit2;
     IUniversalRouter private immutable universalRouter;
+    address private immutable native;
+    uint8 private immutable nativeTokenDecimals;
 
     bytes4 private constant TRANSFER_SELECTOR = bytes4(keccak256("transfer(address,uint256)"));
     bytes4 private constant APPROVE_SELECTOR = bytes4(keccak256("approve(address,uint256)"));
@@ -75,8 +77,6 @@ contract Wallet is BaseAccount, Initializable {
     address public guardian;
     address zero;
     uint64 immutable subscriptionId;
-    address native;
-    uint8 nativeTokenDecimals;
 
     mapping(uint256 nonce => Transaction txn) public pausedTransactions;
 
@@ -189,6 +189,7 @@ contract Wallet is BaseAccount, Initializable {
     function twoFactorRequired(address target, uint256 value, bytes memory data) internal returns (bool) {
         bytes4 selector;
         uint256 amount;
+        address token;
 
         // Native token transfer
         if (data.length == 0) {
@@ -208,7 +209,15 @@ contract Wallet is BaseAccount, Initializable {
                 // Skip 32 + 4 + 32 (length + func sig + address)
                 amount := mload(add(data, 68))
             }
-            return _twoFactorRequired(target, amount, target, value, data);
+
+            if (selector == TRANSFER_SELECTOR || selector == APPROVE_SELECTOR) {
+                return _twoFactorRequired(target, amount, target, value, data);
+            }
+            assembly {
+                // token
+                token := mload(add(data, 36))
+            }
+            return _twoFactorRequired(token, amount, target, value, data);
         }
     }
 
