@@ -77,6 +77,14 @@ export default function CreateWalletPage() {
         chainName: chain,
         maxUSDAmountAllowed: maxAmountAllowed,
       });
+
+      toast.success("Wallet created!", {
+        description: "Your wallet has been created.",
+      });
+
+      setTimeout(() => {
+        router.push("/");
+      }, 2000);
     } catch (e) {
       if (e instanceof TRPCError) {
         return toast.error(e.code, {
