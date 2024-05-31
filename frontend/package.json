@@ -45,6 +45,7 @@
   },
   "devDependencies": {
     "@types/node": "^18.19.3",
+    "@types/nodemailer": "^6.4.15",
     "@types/react": "^18.3.0",
     "autoprefixer": "^10.4.19",
     "eslint": "^8.15.0",

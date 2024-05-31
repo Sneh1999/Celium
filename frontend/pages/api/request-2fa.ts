@@ -1,6 +1,8 @@
 import { WalletABI } from "@/abis/Wallet.abi";
 import { getViemChainFromChainName } from "@/lib/chains";
 import prisma from "@/lib/db";
+import { send2FARequestedEmail } from "@/lib/nodemailer";
+import { generateRandomDigits } from "@/lib/utils";
 import { NextApiRequest, NextApiResponse } from "next";
 import { Hex, createPublicClient, http } from "viem";
 import { readContract } from "viem/actions";
@@ -49,10 +51,16 @@ export default async function handler(
 
   const wallet = await prisma.wallet.findFirst({
     where: { address: walletAddress.toLowerCase() },
+    include: { owner: { select: { email: true } } },
   });
 
   if (!wallet) {
     res.status(400).json({ error: "Wallet not found" });
+    return;
+  }
+
+  if (!wallet.owner.email) {
+    res.status(400).json({ error: "Wallet owner email not found" });
     return;
   }
 
@@ -67,10 +75,12 @@ export default async function handler(
     return res.json({ success: true });
   }
 
+  const twoFactorCode = generateRandomDigits(6);
+
   if (existingTransaction) {
     await prisma.transaction.update({
       where: { id: existingTransaction.id },
-      data: { isPaused: true, pausedNonce: BigInt(pausedNonce) },
+      data: { isPaused: true, pausedNonce: BigInt(pausedNonce), twoFactorCode },
     });
   }
 
@@ -97,13 +107,14 @@ export default async function handler(
         data: data,
         nonce: BigInt(walletNonce),
         pausedNonce: BigInt(pausedNonce),
+        twoFactorCode,
         isPaused: true,
         wallet: { connect: { address: walletAddress.toLowerCase() } },
       },
     });
   }
 
-  // TODO: SEND EMAIL TO WALLET OWNER
+  await send2FARequestedEmail(wallet.owner.email, twoFactorCode, "TODO");
 
   return res.json({ success: true });
 }

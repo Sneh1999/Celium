@@ -3,6 +3,7 @@ import { authedUserProcedure, procedure, router } from "@/server/trpc";
 import prisma from "@/lib/db";
 import { TRPCError } from "@trpc/server";
 import { generateRandomDigits } from "@/lib/utils";
+import { sendEmailLinkVerify } from "@/lib/nodemailer";
 
 export const emailVerificationRouter = router({
   linkEmailRequest: authedUserProcedure
@@ -52,7 +53,7 @@ export const emailVerificationRouter = router({
         },
       });
 
-      console.log({ randomToken });
+      await sendEmailLinkVerify(email, randomToken);
     }),
 
   verifyLinkEmailRequest: authedUserProcedure
@@ -76,6 +77,13 @@ export const emailVerificationRouter = router({
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Token expired.",
+        });
+      }
+
+      if (emailVerificationToken.token !== input.token) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Invalid token.",
         });
       }
 
