@@ -5,6 +5,7 @@ import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 import {WETH9} from "@chainlink/local/src/shared/WETH9.sol";
 import {FeedsRegistry} from "../src/FeedsRegistry.sol";
 import "./Consumer.sol";
+import "./WalletFactory.sol";
 
 abstract contract Constants {
     // Tokens
@@ -14,7 +15,7 @@ abstract contract Constants {
     // Our Contracts
     FeedsRegistry FEEDS_REGISTRY = FeedsRegistry(0x062E5C9D71f73a66bA2Ad1CC02063685bA6729Ba);
     Consumer FUNCTIONS_CONSUMER = Consumer(0x15cD88eACB1E189a83Ed4D3d20233718b72FBCa9);
-
+    WalletFactory WALLET_FACTORY = WalletFactory(0x520ceaf62Da1cFE9E98279e3559F6e8bAF43f7E7);
     // External Contracts
     EntryPoint ENTRYPOINT = EntryPoint(payable(0xcAc30D6Dc9bEED0D31699c059ceD50d0b8279aeF));
     address CCIP_ROUTER = 0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59;
