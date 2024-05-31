@@ -12,7 +12,7 @@ abstract contract Constants {
     WETH9 WETH = WETH9(payable(0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14));
 
     // Our Contracts
-    FeedsRegistry FEEDS_REGISTRY = FeedsRegistry(0x0B7f332ECeF4141B6eb314C96363E777D1Ede2a4);
+    FeedsRegistry FEEDS_REGISTRY = FeedsRegistry(0x062E5C9D71f73a66bA2Ad1CC02063685bA6729Ba);
     Consumer FUNCTIONS_CONSUMER = Consumer(0x15cD88eACB1E189a83Ed4D3d20233718b72FBCa9);
 
     // External Contracts
@@ -34,6 +34,6 @@ abstract contract Constants {
     string ETHEREUM_SEPOLIA_RPC_URL = "https://rpc.ankr.com/eth_sepolia";
     string ARBITRUM_SEPOLIA_RPC_URL = "https://sepolia-rollup.arbitrum.io/rpc";
 
-    address  ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    address ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     uint8 NATIVE_TOKEN_DECIMALS = 18;
 }
