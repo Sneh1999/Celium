@@ -74,7 +74,7 @@ model Transaction {
   value       BigInt
   data        String
   nonce       BigInt
-  pausedNonce BigInt
+  pausedNonce BigInt?
 
   isPaused  Boolean @default(false)
   isSuccess Boolean @default(false)

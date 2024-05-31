@@ -2,12 +2,11 @@ import { WalletABI } from "@/abis/Wallet.abi";
 import { trpc } from "@/lib/trpc";
 import { getAccountInstance } from "@/lib/userop";
 import { toast } from "sonner";
-import { Account } from "userop/dist/v06";
 import { parseEventLogs } from "viem";
 
 interface HandleUserOpOpts {
   accountInstance: Awaited<ReturnType<typeof getAccountInstance>>;
-  walletFn: "execute" | "approveTransaction" | "swapAndBridge";
+  walletFn: "execute" | "approveTransaction";
   walletId: number;
   target: `0x${string}`;
   value: bigint;
@@ -37,6 +36,7 @@ export function useSendUserOp() {
         value: opts.value,
         data: opts.data,
         nonce: walletNonce,
+        pausedNonce: null,
         isPaused: false,
         isSuccess: false,
         isFailed: true,
@@ -49,11 +49,11 @@ export function useSendUserOp() {
     const logs = parseEventLogs({
       abi: WalletABI,
       logs: receipt.logs,
+      eventName: "TwoFactorAuthRequired",
     });
 
-    const isTxnPaused = logs.some(
-      (log) => log.eventName === "TwoFactorAuthRequired"
-    );
+    const twoFactorRequiredEvent = logs.length > 0 ? logs[0] : undefined;
+    const isTxnPaused = twoFactorRequiredEvent !== undefined;
 
     if (isTxnPaused) {
       await recordNewTransaction.mutateAsync({
@@ -61,6 +61,7 @@ export function useSendUserOp() {
         value: opts.value,
         data: opts.data,
         nonce: walletNonce,
+        pausedNonce: twoFactorRequiredEvent.args.pausedNonce,
         isPaused: true,
         isSuccess: false,
         isFailed: false,

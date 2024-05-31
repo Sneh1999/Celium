@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "postinstall": "pn db:push && pn db:generate"
   },
   "dependencies": {
     "@learnweb3dao/siwe": "^0.3.0",

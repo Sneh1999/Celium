@@ -9,10 +9,6 @@ import { ContractAddressesByChain } from "@/lib/contracts";
 import { WalletFactoryABI } from "@/abis/WalletFactory.abi";
 import { TokenInfo, getTokenBalancesForWallet } from "@/lib/tokens";
 
-type WalletWithTokenInfo = Wallet & {
-  tokenInfo: TokenInfo[];
-};
-
 export const walletRouter = router({
   getWallets: authedUserProcedure.query(async ({ ctx }) => {
     const allWallets = await prisma.wallet.findMany({
@@ -32,6 +28,10 @@ export const walletRouter = router({
         },
       },
     });
+
+    type WalletWithTokenInfo = (typeof allWallets)[number] & {
+      tokenInfo: TokenInfo[];
+    };
 
     const walletsWithTokenInfo: WalletWithTokenInfo[] = [];
 
