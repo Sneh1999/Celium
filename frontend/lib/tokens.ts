@@ -1,4 +1,6 @@
-import { ChainNames } from "./chains";
+import { Wallet } from "@prisma/client";
+import { ChainNames, getViemChainFromChainName } from "./chains";
+import { createPublicClient, erc20Abi, http } from "viem";
 
 interface Token {
   symbol: string;
@@ -120,3 +122,58 @@ export const TokensByChain: Record<ChainNames, TokenOnChain[]> = {
   avalanche_fuji: AvalancheFujiTokens,
   polygon_amoy: PolygonAmoyTokens,
 };
+
+export interface TokenInfo extends TokenOnChain {
+  balance: bigint;
+  usdPrice: number;
+}
+
+export async function getTokenBalancesForWallet(wallet: Wallet) {
+  const supportedTokens =
+    TokensByChain[wallet.chain.toLowerCase() as ChainNames];
+
+  const promises: Promise<TokenInfo>[] = [];
+
+  for (const token of supportedTokens) {
+    const publicClient = createPublicClient({
+      chain: getViemChainFromChainName(wallet.chain),
+      transport: http(),
+    });
+
+    if (token.isNative) {
+      promises.push(
+        publicClient
+          .getBalance({
+            address: wallet.address as `0x${string}`,
+          })
+          .then((balance) => {
+            return {
+              ...token,
+              balance,
+              usdPrice: 0,
+            };
+          })
+      );
+    } else {
+      promises.push(
+        publicClient
+          .readContract({
+            abi: erc20Abi,
+            address: token.address,
+            functionName: "balanceOf",
+            args: [wallet.address as `0x${string}`],
+          })
+          .then((balance) => {
+            return {
+              ...token,
+              balance: BigInt(balance),
+              usdPrice: 0,
+            };
+          })
+      );
+    }
+  }
+
+  const tokenInfos = await Promise.all(promises);
+  return tokenInfos;
+}

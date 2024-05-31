@@ -13,14 +13,16 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
+import { useIsMounted } from "@/hooks/useIsMounted";
 import { trpc } from "@/lib/trpc";
 import { TRPCError } from "@trpc/server";
 import { GetServerSideProps } from "next";
 import { getServerSession } from "next-auth";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { getAuthOptions } from "./api/auth/[...nextauth]";
-import { useIsMounted } from "@/hooks/useIsMounted";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await getServerSession(
@@ -56,6 +58,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
 export default function LinkEmailPage() {
   const isMounted = useIsMounted();
+  const router = useRouter();
+  const session = useSession();
 
   const [email, setEmail] = useState("");
   const [sentEmail, setSentEmail] = useState(false);
@@ -84,10 +88,15 @@ export default function LinkEmailPage() {
         }
 
         await verifyLinkEmailRequest.mutateAsync({ token });
+        await session.update();
 
         toast.success("Email verified", {
           description: "Your email has been verified.",
         });
+
+        setTimeout(() => {
+          router.push("/");
+        }, 1000);
       }
     } catch (e) {
       if (e instanceof TRPCError) {

@@ -4,9 +4,14 @@ import { createPublicClient, http } from "viem";
 import { readContract } from "viem/actions";
 import { z } from "zod";
 import { authedUserProcedure, router } from "../trpc";
-import { Chain } from "@prisma/client";
+import { Chain, Wallet } from "@prisma/client";
 import { ContractAddressesByChain } from "@/lib/contracts";
 import { WalletFactoryABI } from "@/abis/WalletFactory.abi";
+import { TokenInfo, getTokenBalancesForWallet } from "@/lib/tokens";
+
+type WalletWithTokenInfo = Wallet & {
+  tokenInfo: TokenInfo[];
+};
 
 export const walletRouter = router({
   getWallets: authedUserProcedure.query(async ({ ctx }) => {
@@ -28,7 +33,14 @@ export const walletRouter = router({
       },
     });
 
-    return allWallets;
+    const walletsWithTokenInfo: WalletWithTokenInfo[] = [];
+
+    for (const wallet of allWallets) {
+      const tokenInfo = await getTokenBalancesForWallet(wallet);
+      walletsWithTokenInfo.push({ ...wallet, tokenInfo });
+    }
+
+    return walletsWithTokenInfo;
   }),
 
   createNewWallet: authedUserProcedure

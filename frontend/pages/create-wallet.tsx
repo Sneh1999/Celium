@@ -44,7 +44,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     };
   }
 
-  if (session && session.user.emailVerified) {
+  if (session && !session.user.emailVerified) {
     return {
       redirect: {
         destination: "/",
