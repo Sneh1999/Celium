@@ -14,6 +14,7 @@ import {BurnMintERC677Helper} from "@chainlink/local/src/ccip/CCIPLocalSimulator
 import "../src/Consumer.sol";
 import "forge-std/Test.sol";
 import "../src/Constants.sol";
+import "../src/PointsPaymaster.sol";
 
 struct Transaction {
     address target;
@@ -30,15 +31,6 @@ contract WalletFactoryTest is Test, Constants {
     address _walletFactory = 0xF369CB5209dA8F59e78efe3a8B3f8ccEe7428c5A;
     address router = 0xb83E47C2bC239B3bf370bc41e1459A34b41238D0;
 
-    address[] feeds = [
-        0x14866185B1962B63C3Ea9E03Bc1da838bab34C19,
-        0x635A86F9fdD16Ff09A0701C305D3a845F1758b8E,
-        0xc59E3633BAAC79493d908e63626716e204A45EdF,
-        0xc0F82A46033b8BdBA4Bb0B0e28Bc2006F64355bC,
-        0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E,
-        0x694AA1769357215DE4FAC081bf1f309aDC325306,
-        0x694AA1769357215DE4FAC081bf1f309aDC325306
-    ];
     address[] tokens = [
         // DAI
         0x68194a729C2450ad26072b3D33ADaCbcef39D574,
@@ -63,6 +55,7 @@ contract WalletFactoryTest is Test, Constants {
     uint256 guardianPrivateKey = 0xabc123;
     uint256 sepoliaFork;
     uint256 arbSepoliaFork;
+    PointsPaymaster pointsPaymaster;
 
     // Set up
 
@@ -76,6 +69,9 @@ contract WalletFactoryTest is Test, Constants {
         // Mock the owner and guradian on sepolia
         owner = vm.addr(ownerPrivateKey);
         guardian = vm.addr(guardianPrivateKey);
+
+        pointsPaymaster = new PointsPaymaster(ENTRYPOINT);
+
         walletFactory = new WalletFactory(
             ENTRYPOINT,
             address(FEEDS_REGISTRY),
@@ -84,8 +80,11 @@ contract WalletFactoryTest is Test, Constants {
             CCIP_ROUTER,
             CF_SUBSCRIPTION_ID,
             ETH,
-            NATIVE_TOKEN_DECIMALS
+            NATIVE_TOKEN_DECIMALS,
+            address(pointsPaymaster)
         );
+
+        vm.deal(address(pointsPaymaster), 100 ether);
 
         FUNCTIONS_CONSUMER.setWalletFactoryAddress(address(walletFactory));
 
@@ -288,6 +287,45 @@ contract WalletFactoryTest is Test, Constants {
 
         uint256 balance = address(guardian).balance;
         assertEq(balance, 1 ether);
+    }
+
+    // test paymaster
+    function test_paymasterAndPoints() public {
+        bytes memory transferCalldata = abi.encodeWithSelector(ERC20.transfer.selector, guardian, 1e6);
+        bytes memory transactionCalldata =
+            abi.encodeWithSelector(Wallet.execute.selector, address(USDC), uint256(0), transferCalldata);
+
+        (PackedUserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
+        _handleOp(userOp);
+        transferCalldata = abi.encodeWithSelector(ERC20.transfer.selector, guardian, 1e6);
+        transactionCalldata =
+            abi.encodeWithSelector(Wallet.execute.selector, address(USDC), uint256(0), transferCalldata);
+
+        (userOp,) = _getUserOp(transactionCalldata, "", false);
+        _handleOp(userOp);
+        transferCalldata = abi.encodeWithSelector(ERC20.transfer.selector, guardian, 1);
+        transactionCalldata =
+            abi.encodeWithSelector(Wallet.execute.selector, address(USDC), uint256(0), transferCalldata);
+
+        (userOp,) = _getUserOp(transactionCalldata, "", false);
+        bytes32 hash = pointsPaymaster.getHash(userOp, keccak256(abi.encodePacked(createdWalletAddress)));
+
+        bytes32 digest = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
+        ENTRYPOINT.depositTo{value: 10 ether}(address(pointsPaymaster));
+        bytes memory paymasterAndData = abi.encodePacked(
+            address(pointsPaymaster),
+            uint128(1_000_000),
+            uint128(30_000),
+            abi.encodePacked(createdWalletAddress),
+            abi.encodePacked(r, s, v)
+        );
+        (userOp,) = _getUserOp(transactionCalldata, paymasterAndData, false);
+
+        vm.expectEmit(true, false, false, false, address(pointsPaymaster));
+        emit PointsPaymaster.PaymasterEvent(createdWalletAddress);
+        _handleOp(userOp);
     }
 
     // Internals
