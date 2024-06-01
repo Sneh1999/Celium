@@ -1,4 +1,4 @@
-import { ChainNames } from "./chains";
+import { Chain } from "@prisma/client";
 
 type AvailableFeaturesPerChain = {
   priceFeeds: boolean;
@@ -7,50 +7,44 @@ type AvailableFeaturesPerChain = {
   ccip: boolean;
 };
 
-export const ChainFeatures: Record<ChainNames, AvailableFeaturesPerChain> = {
-  anvil: {
+export const ChainFeatures: Record<Chain, AvailableFeaturesPerChain> = {
+  [Chain.ANVIL]: {
     priceFeeds: true,
     functions: false,
     uniswapv3: true,
     ccip: true,
   },
-  sepolia: {
+  [Chain.SEPOLIA]: {
     priceFeeds: true,
     functions: true,
     uniswapv3: true,
     ccip: true,
   },
-  arbitrum_sepolia: {
+  [Chain.ARBITRUM_SEPOLIA]: {
     priceFeeds: true,
     functions: true,
     uniswapv3: true,
     ccip: true,
   },
-  base_sepolia: {
+  [Chain.BASE_SEPOLIA]: {
     priceFeeds: true,
     functions: true,
     uniswapv3: true,
     ccip: true,
   },
-  avalanche_fuji: {
+  [Chain.AVALANCHE_FUJI]: {
     priceFeeds: true,
     functions: true,
     uniswapv3: true,
     ccip: true,
   },
-  zksync_sepolia: {
-    priceFeeds: true,
-    functions: false,
-    uniswapv3: true,
-    ccip: false,
-  },
-  scroll_sepolia: {
+  [Chain.SCROLL_SEPOLIA]: {
     priceFeeds: true,
     functions: false,
     uniswapv3: true,
     ccip: false,
   },
-  polygon_amoy: {
+  [Chain.POLYGON_AMOY]: {
     priceFeeds: true,
     functions: true,
     uniswapv3: true,

@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useSendUserOp } from "@/hooks/useSendUserOp";
-import { ChainData, ChainNames } from "@/lib/chains";
+import { ChainData } from "@/lib/chains";
 import { TokensByChain } from "@/lib/tokens";
 import { trpc } from "@/lib/trpc";
 import { getAccountInstance } from "@/lib/userop";
@@ -52,8 +52,7 @@ export default function TransferPage() {
 
     if (!wallet) return [];
 
-    const tokensOnChain =
-      TokensByChain[wallet.chain.toLowerCase() as ChainNames];
+    const tokensOnChain = TokensByChain[wallet.chain];
 
     return tokensOnChain;
   }, [selectedWalletId]);
@@ -71,10 +70,9 @@ export default function TransferPage() {
       if (!wallet) throw new Error("No wallet selected");
 
       const accountInstance = await getAccountInstance({
-        chainName: wallet.chain.toLowerCase() as ChainNames,
+        wallet,
         ownerAddress: session?.user.address as `0x${string}`,
         walletClient,
-        salt: BigInt(wallet.salt),
         usePaymaster: false,
       });
 
@@ -150,10 +148,8 @@ export default function TransferPage() {
                         <div className="flex items-center gap-2">
                           <img
                             src={
-                              ChainData.find(
-                                (cd) =>
-                                  cd.chainName === wallet.chain.toLowerCase()
-                              )!.imageUrl
+                              ChainData.find((cd) => cd.chain === wallet.chain)!
+                                .imageUrl
                             }
                             alt={`${wallet.chain} logo`}
                             className="h-5 w-5"

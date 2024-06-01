@@ -43,6 +43,28 @@ export const walletRouter = router({
     return walletsWithTokenInfo;
   }),
 
+  getWalletByAddress: authedUserProcedure
+    .input(z.object({ address: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const wallet = await prisma.wallet.findUnique({
+        where: {
+          address: input.address.toLowerCase(),
+          ownerId: ctx.session.user.id,
+        },
+      });
+
+      if (!wallet) {
+        return null;
+      }
+
+      const tokenInfo = await getTokenBalancesForWallet(wallet);
+
+      return {
+        ...wallet,
+        tokenInfo,
+      };
+    }),
+
   createNewWallet: authedUserProcedure
     .input(
       z.object({
@@ -79,7 +101,7 @@ export const walletRouter = router({
       await prisma.wallet.create({
         data: {
           name: input.name,
-          address: computedWalletAddress,
+          address: computedWalletAddress.toLowerCase(),
           maxUSDAmountAllowed: input.maxUSDAmountAllowed,
           salt,
           isDeployed: false,

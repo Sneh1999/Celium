@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChainData, ChainNames } from "@/lib/chains";
+import { ChainData } from "@/lib/chains";
 import { trpc } from "@/lib/trpc";
 import { TRPCError } from "@trpc/server";
 import { GetServerSideProps } from "next";
@@ -27,6 +27,7 @@ import { useIsMounted } from "@/hooks/useIsMounted";
 import { useRouter } from "next/router";
 import { ChainFeatures } from "@/lib/features";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Chain } from "@prisma/client";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await getServerSession(
@@ -66,7 +67,7 @@ export default function CreateWalletPage() {
 
   const [name, setName] = useState("");
   const [maxAmountAllowed, setMaxAmountAllowed] = useState(500);
-  const [chain, setChain] = useState<ChainNames>("sepolia");
+  const [chain, setChain] = useState<Chain>("SEPOLIA");
 
   const createWallet = trpc.wallets.createNewWallet.useMutation();
 
@@ -118,7 +119,7 @@ export default function CreateWalletPage() {
           <Select
             name="chain"
             value={chain}
-            onValueChange={(v) => setChain(v as ChainNames)}
+            onValueChange={(v) => setChain(v as Chain)}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select Chain" />
@@ -126,7 +127,7 @@ export default function CreateWalletPage() {
             <SelectContent>
               <SelectGroup>
                 {ChainData.map((chain) => (
-                  <SelectItem key={chain.chainName} value={chain.chainName}>
+                  <SelectItem key={chain.chain} value={chain.chain}>
                     <div className="flex items-center gap-2">
                       <img
                         src={chain.imageUrl}
@@ -177,7 +178,11 @@ export default function CreateWalletPage() {
         )}
 
         <div className="flex items-center justify-end gap-2">
-          <Button onClick={handleCreateWallet} variant="secondary">
+          <Button
+            onClick={handleCreateWallet}
+            isLoading={createWallet.isPending}
+            variant="secondary"
+          >
             Create
           </Button>
         </div>

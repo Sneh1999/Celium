@@ -1,16 +1,16 @@
-import { PublicClient, WalletClient, createPublicClient, http } from "viem";
-import { V06 } from "userop";
 import { WalletABI } from "@/abis/Wallet.abi";
 import { WalletFactoryABI } from "@/abis/WalletFactory.abi";
-import { ContractAddressesByChain } from "./contracts";
-import { ChainNames, getViemChainFromChainName } from "./chains";
+import { Wallet } from "@prisma/client";
+import { V06 } from "userop";
+import { WalletClient, createPublicClient, http } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import { getViemChainFromChainName } from "./chains";
+import { ContractAddressesByChain } from "./contracts";
 
 interface GetAccountInstanceOpts {
-  chainName: ChainNames;
+  wallet: Wallet;
   ownerAddress: `0x${string}`;
   walletClient: WalletClient;
-  salt: bigint;
   usePaymaster?: boolean;
 }
 
@@ -18,20 +18,20 @@ export async function getAccountInstance(opts: GetAccountInstanceOpts) {
   const account = new V06.Account.Instance({
     accountAbi: WalletABI,
     factoryAbi: WalletFactoryABI,
-    factoryAddress: ContractAddressesByChain[opts.chainName].factoryAddress,
+    factoryAddress: ContractAddressesByChain[opts.wallet.chain].factoryAddress,
     // @ts-expect-error: Weird viem version mismatch stuff that doesn't affect anything
     ethClient: createPublicClient({
-      chain: getViemChainFromChainName(opts.chainName),
+      chain: getViemChainFromChainName(opts.wallet.chain),
       transport: http(),
     }),
     entryPointAddress:
-      ContractAddressesByChain[opts.chainName].entrypointAddress,
-    setFactoryData: async (salt, encoder) => {
+      ContractAddressesByChain[opts.wallet.chain].entrypointAddress,
+    setFactoryData: async (_salt, encoder) => {
       return encoder("createAccount", [
         opts.ownerAddress,
-        ContractAddressesByChain[opts.chainName].guardianAddress,
-        salt,
-        BigInt(2_000_000), // TODO: MAX AMOUNT ALLOWED
+        ContractAddressesByChain[opts.wallet.chain].guardianAddress,
+        BigInt(opts.wallet.salt),
+        BigInt(opts.wallet.maxUSDAmountAllowed), // TODO: MAX AMOUNT ALLOWED
       ]);
     },
     requestSignature: async (type, message) => {
@@ -60,7 +60,7 @@ export async function getAccountInstance(opts: GetAccountInstanceOpts) {
     },
   });
 
-  account.setSalt(opts.salt);
+  account.setSalt(BigInt(opts.wallet.salt));
 
   return account;
 }

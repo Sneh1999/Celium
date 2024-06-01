@@ -6,6 +6,47 @@ import { generateRandomDigits } from "@/lib/utils";
 import { send2FARequestedEmail } from "@/lib/nodemailer";
 
 export const transactionsRouter = router({
+  getUserTransactions: authedUserProcedure.query(async ({ ctx }) => {
+    const allTransactions = await prisma.transaction.findMany({
+      where: {
+        wallet: { ownerId: ctx.session.user.id },
+      },
+      include: {
+        wallet: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return allTransactions;
+  }),
+
+  getUserTransactionsByWallet: authedUserProcedure
+    .input(
+      z.object({
+        walletAddress: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const allTransactions = await prisma.transaction.findMany({
+        where: {
+          wallet: {
+            address: input.walletAddress.toLowerCase(),
+            ownerId: ctx.session.user.id,
+          },
+        },
+        include: {
+          wallet: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      return allTransactions;
+    }),
+
   getPausedTransactions: authedUserProcedure.query(async ({ ctx }) => {
     const pausedTxns = await prisma.transaction.findMany({
       where: {

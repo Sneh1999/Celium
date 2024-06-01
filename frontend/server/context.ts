@@ -12,9 +12,17 @@ export async function createContext(ctx: CreateNextContextOptions) {
     session = await getSession(ctx);
   }
 
+  return createContextInner({ session });
+}
+
+interface CreateInnerContextOptions extends Partial<CreateNextContextOptions> {
+  session: Session | null;
+}
+
+export async function createContextInner(opts?: CreateInnerContextOptions) {
   return {
-    session,
+    session: opts?.session,
   };
 }
 
-export type Context = Awaited<ReturnType<typeof createContext>>;
+export type Context = Awaited<ReturnType<typeof createContextInner>>;

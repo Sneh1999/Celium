@@ -1,5 +1,5 @@
-import { Wallet } from "@prisma/client";
-import { ChainNames, getViemChainFromChainName } from "./chains";
+import { Chain, Wallet } from "@prisma/client";
+import { getViemChainFromChainName } from "./chains";
 import { createPublicClient, erc20Abi, http } from "viem";
 
 interface Token {
@@ -15,6 +15,13 @@ interface TokenOnChain extends Token {
 
 const ETH: Token = {
   symbol: "ETH",
+  decimals: 18,
+  imageUrl:
+    "https://cryptologos.cc/logos/versions/ethereum-eth-logo-diamond.svg?v=032",
+};
+
+const WETH: Token = {
+  symbol: "WETH",
   decimals: 18,
   imageUrl:
     "https://cryptologos.cc/logos/versions/ethereum-eth-logo-diamond.svg?v=032",
@@ -61,6 +68,16 @@ const SepoliaTokens: TokenOnChain[] = [
     ...ETH,
     address: "0x0000000000000000000000000000000000000000",
     isNative: true,
+  },
+  {
+    ...USDC,
+    address: "0xf08A50178dfcDe18524640EA6618a1f965821715",
+    isNative: false,
+  },
+  {
+    ...WETH,
+    address: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+    isNative: false,
   },
 ];
 
@@ -112,15 +129,14 @@ const PolygonAmoyTokens: TokenOnChain[] = [
   },
 ];
 
-export const TokensByChain: Record<ChainNames, TokenOnChain[]> = {
-  anvil: AnvilTokens,
-  sepolia: SepoliaTokens,
-  arbitrum_sepolia: ArbitrumSepoliaTokens,
-  base_sepolia: BaseSepoliaTokens,
-  zksync_sepolia: ZkSyncSepoliaTokens,
-  scroll_sepolia: ScrollSepoliaTokens,
-  avalanche_fuji: AvalancheFujiTokens,
-  polygon_amoy: PolygonAmoyTokens,
+export const TokensByChain: Record<Chain, TokenOnChain[]> = {
+  [Chain.ANVIL]: AnvilTokens,
+  [Chain.SEPOLIA]: SepoliaTokens,
+  [Chain.ARBITRUM_SEPOLIA]: ArbitrumSepoliaTokens,
+  [Chain.AVALANCHE_FUJI]: AvalancheFujiTokens,
+  [Chain.BASE_SEPOLIA]: BaseSepoliaTokens,
+  [Chain.SCROLL_SEPOLIA]: ScrollSepoliaTokens,
+  [Chain.POLYGON_AMOY]: PolygonAmoyTokens,
 };
 
 export interface TokenInfo extends TokenOnChain {
@@ -129,8 +145,7 @@ export interface TokenInfo extends TokenOnChain {
 }
 
 export async function getTokenBalancesForWallet(wallet: Wallet) {
-  const supportedTokens =
-    TokensByChain[wallet.chain.toLowerCase() as ChainNames];
+  const supportedTokens = TokensByChain[wallet.chain];
 
   const promises: Promise<TokenInfo>[] = [];
 

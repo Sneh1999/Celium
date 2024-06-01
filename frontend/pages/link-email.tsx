@@ -161,7 +161,13 @@ export default function LinkEmailPage() {
           )}
 
           <div className="flex items-center justify-end gap-2">
-            <Button onClick={handleSubmit} variant="secondary">
+            <Button
+              onClick={handleSubmit}
+              variant="secondary"
+              isLoading={
+                linkEmailRequest.isPending || verifyLinkEmailRequest.isPending
+              }
+            >
               Next
             </Button>
           </div>

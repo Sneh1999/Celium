@@ -81,7 +81,7 @@ export default function SwapPage() {
                     <SelectItem value="1" className="w-full">
                       <div className="flex items-center gap-2">
                         <img
-                          src={TokensByChain["sepolia"][0].imageUrl}
+                          src={TokensByChain["SEPOLIA"][0].imageUrl}
                           alt="Celium"
                           className="h-5 w-5"
                         />
@@ -121,7 +121,7 @@ export default function SwapPage() {
                     <SelectItem value="1" className="w-full">
                       <div className="flex items-center gap-2">
                         <img
-                          src={TokensByChain["sepolia"][0].imageUrl}
+                          src={TokensByChain["SEPOLIA"][0].imageUrl}
                           alt="Celium"
                           className="h-5 w-5"
                         />
@@ -168,7 +168,7 @@ export default function SwapPage() {
                 <SelectContent>
                   <SelectGroup>
                     {ChainData.map((chain) => (
-                      <SelectItem key={chain.chainName} value={chain.chainName}>
+                      <SelectItem key={chain.chain} value={chain.chain}>
                         <div className="flex items-center gap-2">
                           <img
                             src={chain.imageUrl}
