@@ -61,6 +61,7 @@ export const transactionsRouter = router({
   recordNewTransaction: authedUserProcedure
     .input(
       z.object({
+        hash: z.string().nullish(),
         target: z.string(),
         value: z.bigint(),
         data: z.string(),
@@ -101,6 +102,7 @@ export const transactionsRouter = router({
 
       await prisma.transaction.create({
         data: {
+          hash: input.hash,
           target: input.target,
           value: input.value,
           data: input.data,

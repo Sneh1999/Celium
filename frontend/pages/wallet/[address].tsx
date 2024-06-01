@@ -87,13 +87,19 @@ export default function WalletPage({
 
   return (
     <main className="max-w-7xl mx-auto pt-20 flex flex-col gap-8">
-      <div className="flex items-center gap-2">
-        <img
-          src={chainData.imageUrl}
-          alt={chainData.fullName}
-          className="h-8 w-8"
-        />
-        <h1 className="text-3xl font-bold">{wallet.name}</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <img
+            src={chainData.imageUrl}
+            alt={chainData.fullName}
+            className="h-8 w-8"
+          />
+          <h1 className="text-3xl font-bold">{wallet.name}</h1>
+        </div>
+
+        <h1 className="text-3xl font-bold text-muted-foreground px-2 py-1 bg-muted rounded-md">
+          {chainData.fullName}
+        </h1>
       </div>
 
       <WalletBalances wallet={wallet} />

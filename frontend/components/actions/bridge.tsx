@@ -1,7 +1,7 @@
 import { useSendUserOp } from "@/hooks/useSendUserOp";
 import { trpc } from "@/lib/trpc";
 import { getAccountInstance } from "@/lib/userop";
-import { SendHorizonalIcon } from "lucide-react";
+import { SendHorizonalIcon, SendToBackIcon } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -21,8 +21,18 @@ import {
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { ActionProps } from "./props";
+import { Chain } from "@prisma/client";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { ChainData } from "@/lib/chains";
 
-export function SendAction({ tokenInfo, wallet }: ActionProps) {
+export function BridgeAction({ tokenInfo, wallet }: ActionProps) {
   const { data: session } = useSession();
 
   const { data: walletClient } = useWalletClient();
@@ -31,56 +41,15 @@ export function SendAction({ tokenInfo, wallet }: ActionProps) {
 
   const [amount, setAmount] = useState("");
   const [recipient, setRecipient] = useState("");
-  const [isSending, setIsSending] = useState(false);
+  const [destinationChain, setDestinationChain] = useState<Chain>("SEPOLIA");
+  const [isBridging, setIsBridging] = useState(false);
 
-  async function handleSend() {
+  async function handleBridge() {
     try {
-      if (!walletClient) throw new Error("Wallet client not found");
-
-      setIsSending(true);
-
-      const accountInstance = await getAccountInstance({
-        wallet,
-        ownerAddress: session?.user.address as `0x${string}`,
-        walletClient,
-        usePaymaster: false, // TODO
-      });
-
-      const amountInSmallestUnits = parseUnits(amount, tokenInfo.decimals);
-
-      let target: `0x${string}` = "0x";
-      let value: bigint = BigInt(0);
-      let data: `0x${string}` = "0x";
-
-      if (tokenInfo.isNative) {
-        target = recipient as `0x${string}`;
-        value = amountInSmallestUnits;
-        data = "0x";
-      } else {
-        const transferCalldata = encodeFunctionData({
-          abi: erc20Abi,
-          functionName: "transfer",
-          args: [recipient as `0x${string}`, amountInSmallestUnits],
-        });
-
-        target = tokenInfo.address;
-        value = BigInt(0);
-        data = transferCalldata;
-      }
-
-      await handleUserOp({
-        accountInstance,
-        walletFn: "execute",
-        walletId: wallet.id,
-        target,
-        value,
-        data,
-      });
-
-      await trpcUtils.wallets.getWalletByAddress.refetch();
+      setIsBridging(true);
     } catch (e) {
       if (e instanceof Error) {
-        return toast.error("Failed to send", {
+        return toast.error("Failed to bridge", {
           description: e.message,
         });
       }
@@ -90,24 +59,53 @@ export function SendAction({ tokenInfo, wallet }: ActionProps) {
         description: "Unexpected error. Please try again later.",
       });
     } finally {
-      setIsSending(false);
+      setIsBridging(false);
     }
   }
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="secondary" className="flex items-center gap-2">
-          Send <SendHorizonalIcon className="h-4 w-4" />
+        <Button variant="blue" className="flex items-center gap-2">
+          Bridge <SendToBackIcon className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Send</DialogTitle>
+          <DialogTitle>Bridge</DialogTitle>
           <DialogDescription>
-            Send {tokenInfo.symbol} to another wallet!
+            Bridge {tokenInfo.symbol} to a wallet on another chain!
           </DialogDescription>
         </DialogHeader>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="chain">Destination Chain</Label>
+          <Select
+            name="chain"
+            value={destinationChain}
+            onValueChange={(v) => setDestinationChain(v as Chain)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select Chain" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {ChainData.map((chainData) => (
+                  <SelectItem key={chainData.chain} value={chainData.chain}>
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={chainData.imageUrl}
+                        alt={chainData.fullName}
+                        className="h-5 w-5"
+                      />
+                      {chainData.fullName}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="amount">Amount</Label>
@@ -138,10 +136,10 @@ export function SendAction({ tokenInfo, wallet }: ActionProps) {
           </DialogClose>
           <Button
             variant="secondary"
-            isLoading={isSending}
-            onClick={handleSend}
+            isLoading={isBridging}
+            onClick={handleBridge}
           >
-            Send
+            Bridge
           </Button>
         </DialogFooter>
       </DialogContent>

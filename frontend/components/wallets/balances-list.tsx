@@ -13,6 +13,7 @@ import { DepositAction } from "../actions/deposit";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { SendAction } from "../actions/send";
+import { BridgeAction } from "../actions/bridge";
 
 interface WalletBalancesProps {
   wallet: NonNullable<
@@ -99,9 +100,7 @@ function BalanceItem({
           <ArrowDownUpIcon className="h-4 w-4" />
         </Button>
 
-        <Button variant="blue" className="flex items-center gap-2">
-          Bridge <SendToBackIcon className="h-4 w-4" />
-        </Button>
+        <BridgeAction tokenInfo={tokenInfo} wallet={wallet} />
 
         <DepositAction tokenInfo={tokenInfo} wallet={wallet} />
       </div>

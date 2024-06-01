@@ -30,8 +30,11 @@ export function useSendUserOp() {
     });
 
     const receipt = await userOp.wait();
+    const txnHash = receipt?.receipt.transactionHash;
+
     if (!receipt) {
       await recordNewTransaction.mutateAsync({
+        hash: txnHash,
         target: opts.target,
         value: opts.value,
         data: opts.data,
@@ -57,6 +60,7 @@ export function useSendUserOp() {
 
     if (isTxnPaused) {
       await recordNewTransaction.mutateAsync({
+        hash: txnHash,
         target: opts.target,
         value: opts.value,
         data: opts.data,
@@ -74,6 +78,7 @@ export function useSendUserOp() {
       });
     } else {
       await recordNewTransaction.mutateAsync({
+        hash: txnHash,
         target: opts.target,
         value: opts.value,
         data: opts.data,

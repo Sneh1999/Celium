@@ -4,7 +4,10 @@ import { Wallet } from "@prisma/client";
 import { V06 } from "userop";
 import { WalletClient, createPublicClient, http } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { getViemChainFromChainName } from "./chains";
+import {
+  getBundlerPublicClientFromChainName,
+  getViemChainFromChainName,
+} from "./chains";
 import { ContractAddressesByChain } from "./contracts";
 
 interface GetAccountInstanceOpts {
@@ -24,6 +27,8 @@ export async function getAccountInstance(opts: GetAccountInstanceOpts) {
       chain: getViemChainFromChainName(opts.wallet.chain),
       transport: http(),
     }),
+    // @ts-expect-error: Weird viem version mismatch stuff that doesn't affect anything
+    bundlerClient: getBundlerPublicClientFromChainName(opts.wallet.chain),
     entryPointAddress:
       ContractAddressesByChain[opts.wallet.chain].entrypointAddress,
     setFactoryData: async (_salt, encoder) => {
