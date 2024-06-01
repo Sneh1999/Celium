@@ -47,6 +47,7 @@ contract Wallet is BaseAccount, Initializable {
     error GuardianSignatureVerificationFailed();
     error NotSelf();
     error InvalidReceiverAddress(); // Used when the receiver address is 0.
+    error NotPaymaster();
 
     // Structs
     struct Transaction {
@@ -65,6 +66,7 @@ contract Wallet is BaseAccount, Initializable {
     IUniversalRouter private immutable universalRouter;
     address private immutable native;
     uint8 private immutable nativeTokenDecimals;
+    address private immutable paymaster;
 
     bytes4 private constant TRANSFER_SELECTOR = bytes4(keccak256("transfer(address,uint256)"));
     bytes4 private constant APPROVE_SELECTOR = bytes4(keccak256("approve(address,uint256)"));
@@ -75,6 +77,7 @@ contract Wallet is BaseAccount, Initializable {
     uint256 maxTransferAllowedWithoutAuthUSD;
     address public owner;
     address public guardian;
+    uint256 public points;
     address zero;
     uint64 immutable subscriptionId;
 
@@ -98,6 +101,11 @@ contract Wallet is BaseAccount, Initializable {
         _;
     }
 
+    modifier _requireFromPaymaster() {
+        if (msg.sender != paymaster) revert NotPaymaster();
+        _;
+    }
+
     constructor(
         IEntryPoint anEntryPoint,
         address ourWalletFactory,
@@ -107,7 +115,8 @@ contract Wallet is BaseAccount, Initializable {
         address ccipRouter,
         uint64 _subscriptionId,
         address _native,
-        uint8 _nativeTokenDecimals
+        uint8 _nativeTokenDecimals,
+        address _paymaster
     ) {
         _entryPoint = anEntryPoint;
         _walletFactory = ourWalletFactory;
@@ -118,6 +127,7 @@ contract Wallet is BaseAccount, Initializable {
         subscriptionId = _subscriptionId;
         native = _native;
         nativeTokenDecimals = _nativeTokenDecimals;
+        paymaster = _paymaster;
     }
 
     function initialize(address _owner, address _guardian, uint256 _maxAmountAllowed) public initializer {
@@ -133,6 +143,7 @@ contract Wallet is BaseAccount, Initializable {
 
         if (!is2FARequired) {
             _call(target, value, data);
+            points += 1000;
         }
     }
 
@@ -147,6 +158,7 @@ contract Wallet is BaseAccount, Initializable {
         if (guardian != txnHash.recover(approveSignature)) revert GuardianSignatureVerificationFailed();
 
         _call(txn.target, txn.value, txn.data);
+        points += 1000;
     }
 
     function swapAndBridge(
@@ -183,6 +195,10 @@ contract Wallet is BaseAccount, Initializable {
 
     function addDeposit() public payable {
         _entryPoint.depositTo{value: msg.value}(address(this));
+    }
+
+    function burnPoints(uint256 _points) public _requireFromPaymaster {
+        points -= _points;
     }
 
     // Internal Functions
@@ -282,7 +298,6 @@ contract Wallet is BaseAccount, Initializable {
         return 1;
     }
 
-    // TODO add check for allowing only allowlist chains
     function _transferTokensPayNative(
         uint64 _destinationChainSelector,
         address _receiver,

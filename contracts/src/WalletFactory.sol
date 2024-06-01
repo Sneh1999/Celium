@@ -20,7 +20,8 @@ contract WalletFactory {
         address ccipRouter,
         uint64 subscriptionId,
         address _native,
-        uint8 _nativeTokenDecimals
+        uint8 _nativeTokenDecimals,
+        address _paymaster
     ) {
         walletImplementation = new Wallet(
             entryPoint,
@@ -31,7 +32,8 @@ contract WalletFactory {
             ccipRouter,
             subscriptionId,
             _native,
-            _nativeTokenDecimals
+            _nativeTokenDecimals,
+            _paymaster
         );
         consumer = Consumer(_consumer);
     }

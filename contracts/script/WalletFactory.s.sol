@@ -35,7 +35,8 @@ contract WalletFactoryScript is Script, Constants {
             CCIP_ROUTER,
             CF_SUBSCRIPTION_ID,
             ETH,
-            NATIVE_TOKEN_DECIMALS
+            NATIVE_TOKEN_DECIMALS,
+            address(FEEDS_REGISTRY)
         );
         assert(address(walletFactory.consumer()) == address(FUNCTIONS_CONSUMER));
         FUNCTIONS_CONSUMER.setWalletFactoryAddress(address(walletFactory));
