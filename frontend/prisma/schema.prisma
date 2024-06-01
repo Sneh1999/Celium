@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_DIRECT")
 }
 
 model User {
@@ -70,10 +71,11 @@ model Wallet {
 model Transaction {
   id Int @id @default(autoincrement())
 
-  target String
-  value  BigInt
-  data   String
-  nonce  BigInt
+  target      String
+  value       BigInt
+  data        String
+  nonce       BigInt
+  pausedNonce BigInt?
 
   isPaused  Boolean @default(false)
   isSuccess Boolean @default(false)

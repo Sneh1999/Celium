@@ -12,8 +12,47 @@ export const WalletABI = [
         type: "address",
         internalType: "address",
       },
+      {
+        name: "_feedsRegistry",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "_consumer",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "_universalRouter",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "ccipRouter",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "_subscriptionId",
+        type: "uint64",
+        internalType: "uint64",
+      },
+      {
+        name: "_native",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "_nativeTokenDecimals",
+        type: "uint8",
+        internalType: "uint8",
+      },
     ],
     stateMutability: "nonpayable",
+  },
+  {
+    type: "receive",
+    stateMutability: "payable",
   },
   {
     type: "function",
@@ -38,6 +77,35 @@ export const WalletABI = [
       },
     ],
     outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "bridge",
+    inputs: [
+      {
+        name: "token",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "amount",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "_destinationChainSelector",
+        type: "uint64",
+        internalType: "uint64",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
     stateMutability: "nonpayable",
   },
   {
@@ -169,6 +237,50 @@ export const WalletABI = [
   },
   {
     type: "function",
+    name: "swapAndBridge",
+    inputs: [
+      {
+        name: "tokenIn",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "amountIn",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "tokenOut",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "amountOutMin",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "path",
+        type: "bytes",
+        internalType: "bytes",
+      },
+      {
+        name: "_destinationChainSelector",
+        type: "uint64",
+        internalType: "uint64",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "validateUserOp",
     inputs: [
       {
@@ -258,6 +370,19 @@ export const WalletABI = [
   },
   {
     type: "event",
+    name: "ChainlinkDataFeedNotFound",
+    inputs: [
+      {
+        name: "token",
+        type: "address",
+        indexed: false,
+        internalType: "address",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
     name: "Initialized",
     inputs: [
       {
@@ -265,6 +390,55 @@ export const WalletABI = [
         type: "uint64",
         indexed: false,
         internalType: "uint64",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "TokensTransferred",
+    inputs: [
+      {
+        name: "messageId",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
+      },
+      {
+        name: "destinationChainSelector",
+        type: "uint64",
+        indexed: true,
+        internalType: "uint64",
+      },
+      {
+        name: "receiver",
+        type: "address",
+        indexed: false,
+        internalType: "address",
+      },
+      {
+        name: "token",
+        type: "address",
+        indexed: false,
+        internalType: "address",
+      },
+      {
+        name: "tokenAmount",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
+      {
+        name: "feeToken",
+        type: "address",
+        indexed: false,
+        internalType: "address",
+      },
+      {
+        name: "fees",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
       },
     ],
     anonymous: false,
@@ -357,6 +531,27 @@ export const WalletABI = [
   },
   {
     type: "error",
+    name: "InvalidReceiverAddress",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "NotEnoughBalance",
+    inputs: [
+      {
+        name: "currentBalance",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "calculatedFees",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+  },
+  {
+    type: "error",
     name: "NotEntrypointOrFactory",
     inputs: [],
   },
@@ -364,5 +559,26 @@ export const WalletABI = [
     type: "error",
     name: "NotInitializing",
     inputs: [],
+  },
+  {
+    type: "error",
+    name: "NotSelf",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "StringsInsufficientHexLength",
+    inputs: [
+      {
+        name: "value",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "length",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
   },
 ] as const;

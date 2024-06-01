@@ -26,16 +26,37 @@ import { getAccountInstance } from "@/lib/userop";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { encodeFunctionData, erc20Abi } from "viem";
+import { encodeFunctionData, erc20Abi, parseUnits } from "viem";
 import { useWalletClient } from "wagmi";
 
 export default function TransferPage() {
   const { data: session } = useSession();
   const { data: walletClient } = useWalletClient();
   const { handleUserOp } = useSendUserOp();
-
   const allWallets = trpc.wallets.getWallets.useQuery();
+
+  const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
+  const [selectedTokenSymbol, setSelectedTokenSymbol] = useState<string>("");
+  const [recipient, setRecipient] = useState<string>("");
+  const [amount, setAmount] = useState<string>("");
+
+  const supportedTokens = useMemo(() => {
+    if (!allWallets.data) return [];
+    if (!selectedWalletId) return [];
+
+    const wallet = allWallets.data.find(
+      (wallet) => wallet.id === Number(selectedWalletId)
+    );
+
+    if (!wallet) return [];
+
+    const tokensOnChain =
+      TokensByChain[wallet.chain.toLowerCase() as ChainNames];
+
+    return tokensOnChain;
+  }, [selectedWalletId]);
 
   async function handleTransfer() {
     try {
@@ -43,7 +64,11 @@ export default function TransferPage() {
       if (!walletClient) throw new Error("Wallet client not found");
       if (!session) throw new Error("No session found");
 
-      const wallet = allWallets.data[0]; // TODO: CHANGE
+      const wallet = allWallets.data.find(
+        (wallet) => wallet.id === Number(selectedWalletId)
+      );
+
+      if (!wallet) throw new Error("No wallet selected");
 
       const accountInstance = await getAccountInstance({
         chainName: wallet.chain.toLowerCase() as ChainNames,
@@ -53,28 +78,28 @@ export default function TransferPage() {
         usePaymaster: false,
       });
 
-      // TODO: REMOVE
-      const tokenAddress = "0xf99F35d284675D594Cf0dda5C7B8979Df947e134";
-      const toAddress = "0xf99F35d284675D594Cf0dda5C7B8979Df947e134";
-      const amount = BigInt(1e18);
-      const isNativeToken = true;
+      const token = supportedTokens.find(
+        (token) => token.symbol === selectedTokenSymbol
+      );
+      if (!token) throw new Error("No token selected");
+      const amountInSmallestUnits = parseUnits(amount, token.decimals);
 
       let target: `0x${string}` = "0x";
       let value: bigint = BigInt(0);
       let data: `0x${string}` = "0x";
 
-      if (isNativeToken) {
-        target = toAddress;
-        value = amount;
+      if (token.isNative) {
+        target = recipient as `0x${string}`;
+        value = amountInSmallestUnits;
         data = "0x";
       } else {
         const transferCalldata = encodeFunctionData({
           abi: erc20Abi,
           functionName: "transfer",
-          args: [toAddress, amount],
+          args: [recipient as `0x${string}`, amountInSmallestUnits],
         });
 
-        target = tokenAddress;
+        target = token.address;
         value = BigInt(0);
         data = transferCalldata;
       }
@@ -110,23 +135,34 @@ export default function TransferPage() {
             {allWallets.isLoading ? (
               "Loading..."
             ) : (
-              <Select name="wallet">
+              <Select name="wallet" onValueChange={setSelectedWalletId}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Wallet" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="1" className="w-full">
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={ChainData[0].imageUrl}
-                          alt="Celium"
-                          className="h-5 w-5"
-                        />
-                        <span>My Wallet #1</span>
-                        <span>($13,214,120)</span>
-                      </div>
-                    </SelectItem>
+                    {allWallets.data?.map((wallet) => (
+                      <SelectItem
+                        key={wallet.id}
+                        value={wallet.id.toString()}
+                        className="w-full"
+                      >
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={
+                              ChainData.find(
+                                (cd) =>
+                                  cd.chainName === wallet.chain.toLowerCase()
+                              )!.imageUrl
+                            }
+                            alt={`${wallet.chain} logo`}
+                            className="h-5 w-5"
+                          />
+                          <span>{wallet.name}</span>
+                          <span>$TODO WALLET BALANCE DEXTOOLS</span>
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -140,22 +176,28 @@ export default function TransferPage() {
                 Balance: 0.41 ETH
               </span>
             </div>
-            <Select name="token">
+            <Select name="token" onValueChange={setSelectedTokenSymbol}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select Token" />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="1" className="w-full">
-                    <div className="flex items-center gap-2">
-                      <img
-                        src={TokensByChain["sepolia"][0].imageUrl}
-                        alt="Celium"
-                        className="h-5 w-5"
-                      />
-                      <span>ETH</span>
-                    </div>
-                  </SelectItem>
+                  {supportedTokens.map((token) => (
+                    <SelectItem
+                      key={token.symbol}
+                      value={token.symbol}
+                      className="w-full"
+                    >
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={token.imageUrl}
+                          alt={`${token.symbol} logo`}
+                          className="h-5 w-5"
+                        />
+                        <span>{token.symbol}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -168,7 +210,13 @@ export default function TransferPage() {
                 Value: $1,412 USD
               </span>
             </div>
-            <Input type="number" id="amount" name="amount" />
+            <Input
+              type="number"
+              id="amount"
+              name="amount"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
           </div>
 
           <div className="flex flex-col gap-2">
@@ -179,6 +227,8 @@ export default function TransferPage() {
               id="recipient"
               name="recipient"
               placeholder="0x..."
+              value={recipient}
+              onChange={(e) => setRecipient(e.target.value)}
             />
           </div>
 

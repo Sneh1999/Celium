@@ -6,11 +6,14 @@ import { toast } from "sonner";
 import { useAccount, useSignMessage } from "wagmi";
 import { Button } from "../ui/button";
 import { LogOutIcon } from "lucide-react";
+import { useIsMounted } from "@/hooks/useIsMounted";
 
 export function SignInWithEthereum() {
   const { isConnected, address, chainId } = useAccount();
   const session = useSession();
   const { signMessageAsync } = useSignMessage();
+
+  const isMounted = useIsMounted();
 
   async function handleSIWE() {
     try {
@@ -54,7 +57,9 @@ export function SignInWithEthereum() {
     if (!session.data && session.status !== "loading" && isConnected) {
       void handleSIWE();
     }
-  }, [isConnected, session]);
+  }, [isConnected, session, isMounted]);
+
+  if (!isMounted) return null;
 
   if (!session.data) {
     return <ConnectButton />;

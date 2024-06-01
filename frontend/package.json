@@ -3,18 +3,20 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 5555",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "postinstall": "pnpm db:push && pnpm db:generate"
   },
   "dependencies": {
     "@learnweb3dao/siwe": "^0.3.0",
     "@prisma/client": "5.14.0",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-label": "^2.0.2",
+    "@radix-ui/react-progress": "^1.0.3",
     "@radix-ui/react-select": "^2.0.0",
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-switch": "^1.0.3",
@@ -45,6 +47,7 @@
   },
   "devDependencies": {
     "@types/node": "^18.19.3",
+    "@types/nodemailer": "^6.4.15",
     "@types/react": "^18.3.0",
     "autoprefixer": "^10.4.19",
     "eslint": "^8.15.0",
