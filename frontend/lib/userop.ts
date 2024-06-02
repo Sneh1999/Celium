@@ -22,12 +22,10 @@ export async function getAccountInstance(opts: GetAccountInstanceOpts) {
     accountAbi: WalletABI,
     factoryAbi: WalletFactoryABI,
     factoryAddress: ContractAddressesByChain[opts.wallet.chain].factoryAddress,
-    // @ts-expect-error: Weird viem version mismatch stuff that doesn't affect anything
     ethClient: createPublicClient({
       chain: getViemChainFromChainName(opts.wallet.chain),
       transport: http(),
     }),
-    // @ts-expect-error: Weird viem version mismatch stuff that doesn't affect anything
     bundlerClient: getBundlerPublicClientFromChainName(opts.wallet.chain),
     entryPointAddress:
       ContractAddressesByChain[opts.wallet.chain].entrypointAddress,

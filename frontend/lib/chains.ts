@@ -1,10 +1,8 @@
 import { Chain } from "@prisma/client";
 import { createPublicClient, http } from "viem";
 import {
-  anvil,
   arbitrumSepolia,
   avalancheFuji,
-  baseSepolia,
   polygonAmoy,
   scrollSepolia,
   sepolia,
@@ -14,20 +12,14 @@ import { z } from "zod";
 export const chainNameSchema = z.nativeEnum(Chain);
 
 const VIEM_CHAINS = {
-  [Chain.ANVIL]: anvil,
   [Chain.SEPOLIA]: sepolia,
   [Chain.ARBITRUM_SEPOLIA]: arbitrumSepolia,
-  [Chain.BASE_SEPOLIA]: baseSepolia,
   [Chain.AVALANCHE_FUJI]: avalancheFuji,
   [Chain.SCROLL_SEPOLIA]: scrollSepolia,
   [Chain.POLYGON_AMOY]: polygonAmoy,
 } as const;
 
 const BUNDLER_CLIENTS = {
-  [Chain.ANVIL]: createPublicClient({
-    chain: anvil,
-    transport: http("https://public.stackup.sh/api/v1/node/anvil"),
-  }),
   [Chain.SEPOLIA]: createPublicClient({
     chain: sepolia,
     transport: http("https://public.stackup.sh/api/v1/node/ethereum-sepolia"),
@@ -35,10 +27,6 @@ const BUNDLER_CLIENTS = {
   [Chain.ARBITRUM_SEPOLIA]: createPublicClient({
     chain: arbitrumSepolia,
     transport: http("https://public.stackup.sh/api/v1/node/arbitrum-sepolia"),
-  }),
-  [Chain.BASE_SEPOLIA]: createPublicClient({
-    chain: baseSepolia,
-    transport: http("https://public.stackup.sh/api/v1/node/base-sepolia"),
   }),
   [Chain.AVALANCHE_FUJI]: createPublicClient({
     chain: avalancheFuji,
@@ -72,12 +60,6 @@ export const ChainData: {
   imageUrl: string;
 }[] = [
   {
-    chain: Chain.ANVIL,
-    fullName: "Anvil",
-    imageUrl:
-      "https://raw.githubusercontent.com/foundry-rs/foundry/master/.github/logo.png",
-  },
-  {
     chain: Chain.SEPOLIA,
     fullName: "Sepolia",
     imageUrl:
@@ -87,11 +69,6 @@ export const ChainData: {
     chain: Chain.ARBITRUM_SEPOLIA,
     fullName: "Arbitrum Sepolia",
     imageUrl: "https://cryptologos.cc/logos/arbitrum-arb-logo.svg?v=032",
-  },
-  {
-    chain: Chain.BASE_SEPOLIA,
-    fullName: "Base Sepolia",
-    imageUrl: "https://avatars.githubusercontent.com/u/108554348?v=4",
   },
   {
     chain: Chain.AVALANCHE_FUJI,

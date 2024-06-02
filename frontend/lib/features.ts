@@ -8,12 +8,6 @@ type AvailableFeaturesPerChain = {
 };
 
 export const ChainFeatures: Record<Chain, AvailableFeaturesPerChain> = {
-  [Chain.ANVIL]: {
-    priceFeeds: true,
-    functions: false,
-    uniswapv3: true,
-    ccip: true,
-  },
   [Chain.SEPOLIA]: {
     priceFeeds: true,
     functions: true,
@@ -26,28 +20,22 @@ export const ChainFeatures: Record<Chain, AvailableFeaturesPerChain> = {
     uniswapv3: true,
     ccip: true,
   },
-  [Chain.BASE_SEPOLIA]: {
-    priceFeeds: true,
-    functions: true,
-    uniswapv3: true,
-    ccip: true,
-  },
   [Chain.AVALANCHE_FUJI]: {
     priceFeeds: true,
     functions: true,
-    uniswapv3: true,
+    uniswapv3: false,
     ccip: true,
   },
   [Chain.SCROLL_SEPOLIA]: {
     priceFeeds: true,
     functions: false,
-    uniswapv3: true,
+    uniswapv3: false,
     ccip: false,
   },
   [Chain.POLYGON_AMOY]: {
     priceFeeds: true,
     functions: true,
-    uniswapv3: true,
+    uniswapv3: false,
     ccip: true,
   },
 };

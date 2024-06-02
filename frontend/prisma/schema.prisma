@@ -37,10 +37,8 @@ model EmailVerificationToken {
 }
 
 enum Chain {
-  ANVIL
   SEPOLIA
   ARBITRUM_SEPOLIA
-  BASE_SEPOLIA
   AVALANCHE_FUJI
   SCROLL_SEPOLIA
   POLYGON_AMOY

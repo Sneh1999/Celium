@@ -51,7 +51,9 @@ contract WalletFactory {
 
         bytes memory walletInit = abi.encodeCall(Wallet.initialize, (owner, guardian, maxAmountAllowed));
         ERC1967Proxy proxy = new ERC1967Proxy{salt: bytes32(salt)}(address(walletImplementation), walletInit);
-        consumer.setAuthorizedWallet(address(proxy), true);
+        if (address(consumer) != address(0)) {
+            consumer.setAuthorizedWallet(address(proxy), true);
+        }
         return Wallet(payable(address(proxy)));
     }
 

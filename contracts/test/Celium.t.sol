@@ -38,7 +38,7 @@ contract CeliumTest is Test, CeliumContractsMultichainStorage {
         vm.makePersistent(address(ccipLocalSimulatorFork));
 
         initializeStorage("SEPOLIA");
-        deployOurContracts("SEPOLIA");
+        deployOurContracts();
 
         // Deploy one wallet through an empty UserOp
         (UserOperation memory userOp,) = _getUserOp("", "");

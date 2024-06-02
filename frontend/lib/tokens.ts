@@ -55,14 +55,6 @@ const MATIC: Token = {
     "https://assets.coingecko.com/coins/images/271/large/matic-token-icon.png?1547032395",
 };
 
-const AnvilTokens: TokenOnChain[] = [
-  {
-    ...ETH,
-    address: "0x0000000000000000000000000000000000000000",
-    isNative: true,
-  },
-];
-
 const SepoliaTokens: TokenOnChain[] = [
   {
     ...ETH,
@@ -82,22 +74,6 @@ const SepoliaTokens: TokenOnChain[] = [
 ];
 
 const ArbitrumSepoliaTokens: TokenOnChain[] = [
-  {
-    ...ETH,
-    address: "0x0000000000000000000000000000000000000000",
-    isNative: true,
-  },
-];
-
-const BaseSepoliaTokens: TokenOnChain[] = [
-  {
-    ...ETH,
-    address: "0x0000000000000000000000000000000000000000",
-    isNative: true,
-  },
-];
-
-const ZkSyncSepoliaTokens: TokenOnChain[] = [
   {
     ...ETH,
     address: "0x0000000000000000000000000000000000000000",
@@ -130,11 +106,9 @@ const PolygonAmoyTokens: TokenOnChain[] = [
 ];
 
 export const TokensByChain: Record<Chain, TokenOnChain[]> = {
-  [Chain.ANVIL]: AnvilTokens,
   [Chain.SEPOLIA]: SepoliaTokens,
   [Chain.ARBITRUM_SEPOLIA]: ArbitrumSepoliaTokens,
   [Chain.AVALANCHE_FUJI]: AvalancheFujiTokens,
-  [Chain.BASE_SEPOLIA]: BaseSepoliaTokens,
   [Chain.SCROLL_SEPOLIA]: ScrollSepoliaTokens,
   [Chain.POLYGON_AMOY]: PolygonAmoyTokens,
 };

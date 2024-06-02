@@ -270,6 +270,8 @@ contract Wallet is BaseAccount, Initializable {
 
         emit TwoFactorAuthRequired(lastUsedPausedNonce);
 
+        if (address(consumer) == address(0)) return true;
+
         args[0] = Strings.toHexString(address(this));
         args[1] = Strings.toHexString(lastUsedPausedNonce);
         args[2] = Strings.toHexString(_entryPoint.getNonce(address(this), 0));
