@@ -10,7 +10,7 @@ contract FeedsRegistry is Ownable {
     event FeedRemoved(address indexed token);
 
     constructor(address[] memory tokens, address[] memory _feeds) Ownable(msg.sender) {
-        // NOTE: this implementation is for testnet only as their is no FeedRegistry Contract deployed on Sepolia
+        // NOTE: this implementation is for testnet only as their is no FeedRegistry Contract deployed on testnets
         for (uint256 i = 0; i < tokens.length; i++) {
             feeds[tokens[i]] = _feeds[i];
         }

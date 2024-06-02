@@ -6,6 +6,7 @@ libs = ["lib"]
 fs_permissions = [{ access = "read", path = "./" }]
 solc = "0.8.25"
 evm_version = 'cancun'
+via_ir = true
 
 [rpc_endpoints]
 sepolia = "https://rpc.ankr.com/eth_sepolia"

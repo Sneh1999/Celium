@@ -6,6 +6,8 @@ import {WETH9} from "@chainlink/local/src/shared/WETH9.sol";
 import {FeedsRegistry} from "../src/FeedsRegistry.sol";
 import "./Consumer.sol";
 import "./WalletFactory.sol";
+import {IRouterClient} from "ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
+import {IUniversalRouter} from "universal-router/contracts/interfaces/IUniversalRouter.sol";
 
 abstract contract Constants {
     // Tokens
@@ -18,8 +20,8 @@ abstract contract Constants {
     WalletFactory WALLET_FACTORY = WalletFactory(0x520ceaf62Da1cFE9E98279e3559F6e8bAF43f7E7);
     // External Contracts
     EntryPoint ENTRYPOINT = EntryPoint(payable(0xcAc30D6Dc9bEED0D31699c059ceD50d0b8279aeF));
-    address CCIP_ROUTER = 0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59;
-    address UNISWAP_UNIVERSAL_ROUTER = 0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD;
+    IRouterClient CCIP_ROUTER = IRouterClient(0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59);
+    IUniversalRouter UNISWAP_UNIVERSAL_ROUTER = IUniversalRouter(0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD);
 
     // EOAs
     address USDC_WHALE = 0x406C90A36c66A42Cb4699d4Dc46DF7af5dDEe199;

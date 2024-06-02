@@ -6,7 +6,9 @@ import {Wallet} from "./Wallet.sol";
 import {Create2} from "openzeppelin-contracts/contracts/utils/Create2.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Consumer} from "./Consumer.sol";
-import "forge-std/console.sol";
+
+import {IRouterClient} from "ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
+import {IUniversalRouter} from "universal-router/contracts/interfaces/IUniversalRouter.sol";
 
 contract WalletFactory {
     Wallet public immutable walletImplementation;
@@ -16,9 +18,8 @@ contract WalletFactory {
         IEntryPoint entryPoint,
         address feedsRegistry,
         address _consumer,
-        address _universalRouter,
-        address ccipRouter,
-        uint64 subscriptionId,
+        IUniversalRouter _universalRouter,
+        IRouterClient ccipRouter,
         address _native,
         uint8 _nativeTokenDecimals,
         address _paymaster
@@ -30,7 +31,6 @@ contract WalletFactory {
             _consumer,
             _universalRouter,
             ccipRouter,
-            subscriptionId,
             _native,
             _nativeTokenDecimals,
             _paymaster

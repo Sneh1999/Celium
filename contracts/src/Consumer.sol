@@ -7,12 +7,12 @@ import {FunctionsRequest} from "chainlink/src/v0.8/functions/v1_0_0/libraries/Fu
 contract Consumer is FunctionsClient {
     using FunctionsRequest for FunctionsRequest.Request;
 
-    address private immutable router;
     address public walletFactory;
     bytes32 public s_lastRequestId;
     bytes public s_lastResponse;
     bytes public s_lastError;
     uint32 gasLimit = 300000;
+    uint64 subscriptionId;
     bytes32 donId;
     string endpoint;
 
@@ -22,19 +22,18 @@ contract Consumer is FunctionsClient {
 
     mapping(address => bool) public authorizedWallets;
 
-    constructor(address _router, bytes32 _donId, string memory _endpoint) FunctionsClient(_router) {
-        router = _router;
+    constructor(address _router, uint64 _subscriptionId, bytes32 _donId, string memory _endpoint) FunctionsClient(_router) {
+        subscriptionId = _subscriptionId;
         donId = _donId;
         endpoint = _endpoint;
     }
 
     /**
      * @notice Sends an HTTP request for character information
-     * @param subscriptionId The ID for the Chainlink subscription
      * @param args The arguments to pass to the HTTP request
      * @return requestId The ID of the request
      */
-    function sendRequest(uint64 subscriptionId, string[] memory args) external returns (bytes32 requestId) {
+    function sendRequest(string[] memory args) external returns (bytes32 requestId) {
         if (!authorizedWallets[msg.sender]) {
             revert("Unauthorized wallet");
         }

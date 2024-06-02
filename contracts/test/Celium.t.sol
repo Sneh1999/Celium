@@ -1,20 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.20;
 
-import {UserOperation} from "account-abstraction/interfaces/UserOperation.sol";
-import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
-import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import {Wallet} from "../src/Wallet.sol";
-import {WalletFactory} from "../src/WalletFactory.sol";
-import {FeedsRegistry} from "../src/FeedsRegistry.sol";
-import {CCIPLocalSimulatorFork} from "@chainlink/local/src/ccip/CCIPLocalSimulatorFork.sol";
-import {Register} from "@chainlink/local/src/ccip/Register.sol";
-import {WETH9} from "@chainlink/local/src/shared/WETH9.sol";
-import {BurnMintERC677Helper} from "@chainlink/local/src/ccip/CCIPLocalSimulator.sol";
-import "../src/Consumer.sol";
 import "forge-std/Test.sol";
-import "../src/Constants.sol";
-import "../src/PointsPaymaster.sol";
+import {UserOperation} from "account-abstraction/interfaces/UserOperation.sol";
+import {CeliumContractsMultichainStorage} from "../utils/CeliumContractsMultichainStorage.sol";
+import {CCIPLocalSimulatorFork} from "@chainlink/local/src/ccip/CCIPLocalSimulatorFork.sol";
+import {Wallet} from "../src/Wallet.sol";
+import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import {BurnMintERC677Helper} from "@chainlink/local/src/ccip/CCIPLocalSimulator.sol";
+import {Register} from "@chainlink/local/src/ccip/Register.sol";
+import {PointsPaymaster} from "../src/PointsPaymaster.sol";
 
 struct Transaction {
     address target;
@@ -22,92 +17,47 @@ struct Transaction {
     bytes data;
 }
 
-contract WalletFactoryTest is Test, Constants {
-    WalletFactory walletFactory;
-    Wallet wallet;
+contract CeliumTest is Test, CeliumContractsMultichainStorage {
+    uint256 deployerPrivateKey = 0xa11ce;
+    uint256 guardianPrivateKey = 0xb0b;
+
+    address deployer = vm.addr(deployerPrivateKey);
+    address guardian = vm.addr(guardianPrivateKey);
 
     CCIPLocalSimulatorFork ccipLocalSimulatorFork;
+    Wallet wallet;
 
-    address _walletFactory = 0xF369CB5209dA8F59e78efe3a8B3f8ccEe7428c5A;
-    address router = 0xb83E47C2bC239B3bf370bc41e1459A34b41238D0;
-
-    address[] tokens = [
-        // DAI
-        0x68194a729C2450ad26072b3D33ADaCbcef39D574,
-        // GHO
-        0x5d00fab5f2F97C4D682C1053cDCAA59c2c37900D,
-        // LINK
-        0x779877A7B0D9E8603169DdbD7836e478b4624789,
-        // SNX
-        0x236f697c518b7AEc0bb227d8B7547b3c27cA29bc,
-        // USDC
-        0xf08A50178dfcDe18524640EA6618a1f965821715,
-        // WETH
-        0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14,
-        // ETH
-        0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE
-    ];
-    address createdWalletAddress;
-    address internal owner;
-    address internal guardian;
-
-    uint256 ownerPrivateKey = 0xa11ce;
-    uint256 guardianPrivateKey = 0xabc123;
-    uint256 sepoliaFork;
-    uint256 arbSepoliaFork;
-    PointsPaymaster pointsPaymaster;
-
-    // Set up
+    uint64 ARB_SEPOLIA_CHAIN_SELECTOR = 3478487238524512106;
+    uint256 arbSepoliaFork = vm.createFork("https://sepolia-rollup.arbitrum.io/rpc");
 
     function setUp() public {
-        sepoliaFork = vm.createSelectFork(ETHEREUM_SEPOLIA_RPC_URL);
-        arbSepoliaFork = vm.createFork(ARBITRUM_SEPOLIA_RPC_URL);
+        string memory forkRpcUrl = getForkURL("SEPOLIA");
+        vm.createSelectFork(forkRpcUrl);
 
         ccipLocalSimulatorFork = new CCIPLocalSimulatorFork();
         vm.makePersistent(address(ccipLocalSimulatorFork));
 
-        // Mock the owner and guradian on sepolia
-        owner = vm.addr(ownerPrivateKey);
-        guardian = vm.addr(guardianPrivateKey);
+        initializeStorage("SEPOLIA");
+        deployOurContracts("SEPOLIA");
 
-        pointsPaymaster = new PointsPaymaster(ENTRYPOINT);
-
-        walletFactory = new WalletFactory(
-            ENTRYPOINT,
-            address(FEEDS_REGISTRY),
-            address(FUNCTIONS_CONSUMER),
-            UNISWAP_UNIVERSAL_ROUTER,
-            CCIP_ROUTER,
-            ETH,
-            NATIVE_TOKEN_DECIMALS,
-            address(pointsPaymaster)
-        );
-
-        vm.deal(address(pointsPaymaster), 100 ether);
-
-        FUNCTIONS_CONSUMER.setWalletFactoryAddress(address(walletFactory));
-
-        // Deploy uniswap router
-        // Empty UserOp to deploy the Wallet initially
-        (UserOperation memory userOp, address walletAddress) = _getUserOp("", "", true);
-        createdWalletAddress = walletAddress;
-        console.log("Wallet address", walletAddress);
+        // Deploy one wallet through an empty UserOp
+        (UserOperation memory userOp,) = _getUserOp("", "");
         _handleOp(userOp);
 
-        // Create a test token and mint some to the owner
-        vm.startPrank(USDC_WHALE);
-        USDC.transfer(createdWalletAddress, 2_000e6);
-        // transfer eth from usdc whale to created wallet
-        vm.stopPrank();
+        // Give ether to paymaster
+        vm.deal(address(POINTS_PAYMASTER), 100 ether);
+
+        // Give USDC to wallet
+        deal(address(USDC), address(wallet), 2000e6);
     }
 
-    // Write actual tests here
+    // TESTS
     function test_transfer_work_with_2fa() public {
         bytes memory transferCalldata = abi.encodeWithSelector(ERC20.transfer.selector, guardian, 3e6);
         bytes memory transactionCalldata =
             abi.encodeWithSelector(Wallet.execute.selector, address(USDC), uint256(0), transferCalldata);
 
-        (UserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
+        (UserOperation memory userOp,) = _getUserOp(transactionCalldata, "");
         _handleOp(userOp);
         (address target, uint256 value, bytes memory data) = wallet.pausedTransactions(1);
         Transaction memory txn = Transaction(target, value, data);
@@ -120,7 +70,7 @@ contract WalletFactoryTest is Test, Constants {
         bytes memory approveTransactionCalldata =
             abi.encodeWithSelector(Wallet.approveTransaction.selector, nonce, abi.encodePacked(r, s, v));
 
-        (UserOperation memory approveTransactionOp,) = _getUserOp(approveTransactionCalldata, "", false);
+        (UserOperation memory approveTransactionOp,) = _getUserOp(approveTransactionCalldata, "");
         _handleOp(approveTransactionOp);
         uint256 balance = USDC.balanceOf(guardian);
         assertEq(balance, uint256(3e6));
@@ -131,7 +81,7 @@ contract WalletFactoryTest is Test, Constants {
         bytes memory transactionCalldata =
             abi.encodeWithSelector(Wallet.execute.selector, address(USDC), uint256(0), transferCalldata);
 
-        (UserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
+        (UserOperation memory userOp,) = _getUserOp(transactionCalldata, "");
         _handleOp(userOp);
         uint256 balance = USDC.balanceOf(guardian);
         assertEq(balance, uint256(1e6));
@@ -142,7 +92,7 @@ contract WalletFactoryTest is Test, Constants {
         bytes memory transactionCalldata =
             abi.encodeWithSelector(Wallet.execute.selector, address(USDC), uint256(0), approveCalldata);
 
-        (UserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
+        (UserOperation memory userOp,) = _getUserOp(transactionCalldata, "");
         _handleOp(userOp);
         (address target, uint256 value, bytes memory data) = wallet.pausedTransactions(1);
         Transaction memory txn = Transaction(target, value, data);
@@ -155,9 +105,9 @@ contract WalletFactoryTest is Test, Constants {
         bytes memory approveTransactionCalldata =
             abi.encodeWithSelector(Wallet.approveTransaction.selector, nonce, abi.encodePacked(r, s, v));
 
-        (UserOperation memory approveTransactionOp,) = _getUserOp(approveTransactionCalldata, "", false);
+        (UserOperation memory approveTransactionOp,) = _getUserOp(approveTransactionCalldata, "");
         _handleOp(approveTransactionOp);
-        uint256 allowance = USDC.allowance(createdWalletAddress, guardian);
+        uint256 allowance = USDC.allowance(address(wallet), guardian);
         assertEq(allowance, uint256(3e6));
     }
 
@@ -166,22 +116,21 @@ contract WalletFactoryTest is Test, Constants {
         bytes memory transactionCalldata =
             abi.encodeWithSelector(Wallet.execute.selector, address(USDC), uint256(0), approveCalldata);
 
-        (UserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
+        (UserOperation memory userOp,) = _getUserOp(transactionCalldata, "");
         _handleOp(userOp);
-        uint256 allowance = USDC.allowance(createdWalletAddress, guardian);
+        uint256 allowance = USDC.allowance(address(wallet), guardian);
         assertEq(allowance, uint256(1e6));
     }
 
-    // // TEST CCIP and Uniswap
     function test_swapAndBridgeTokens() public {
         Register.NetworkDetails memory sepoliaNetworkDetails = ccipLocalSimulatorFork.getNetworkDetails(block.chainid);
         BurnMintERC677Helper ccipBnM = BurnMintERC677Helper(sepoliaNetworkDetails.ccipBnMAddress);
-        ccipBnM.drip(createdWalletAddress);
+        ccipBnM.drip(address(wallet));
 
         // Transfer some weth to the wallet
         vm.deal(address(this), 500 ether);
         WETH.deposit{value: 100 ether}();
-        WETH.transfer(createdWalletAddress, 100 ether);
+        WETH.transfer(address(wallet), 100 ether);
 
         bytes memory path = abi.encodePacked(address(WETH), uint24(3000), address(ccipBnM));
 
@@ -198,7 +147,7 @@ contract WalletFactoryTest is Test, Constants {
         bytes memory transactionCalldata =
             abi.encodeWithSelector(Wallet.execute.selector, address(wallet), 0, swapAndBridgeCalldata);
 
-        (UserOperation memory swapAndBridgeCalldataOp,) = _getUserOp(transactionCalldata, "", false);
+        (UserOperation memory swapAndBridgeCalldataOp,) = _getUserOp(transactionCalldata, "");
         _handleOp(swapAndBridgeCalldataOp);
 
         (address target, uint256 value, bytes memory data) = wallet.pausedTransactions(1);
@@ -212,7 +161,7 @@ contract WalletFactoryTest is Test, Constants {
         bytes memory approveTransactionCalldata =
             abi.encodeWithSelector(Wallet.approveTransaction.selector, nonce, abi.encodePacked(r, s, v));
 
-        (UserOperation memory approveTransactionOp,) = _getUserOp(approveTransactionCalldata, "", false);
+        (UserOperation memory approveTransactionOp,) = _getUserOp(approveTransactionCalldata, "");
         _handleOp(approveTransactionOp);
         ccipLocalSimulatorFork.switchChainAndRouteMessage(arbSepoliaFork);
 
@@ -220,15 +169,13 @@ contract WalletFactoryTest is Test, Constants {
             ccipLocalSimulatorFork.getNetworkDetails(block.chainid);
         BurnMintERC677Helper ccipBnMArbSepolia = BurnMintERC677Helper(arbSepoliaNetworkDetails.ccipBnMAddress);
 
-        assertEq(ccipBnMArbSepolia.balanceOf(createdWalletAddress) > 0, true);
+        assertEq(ccipBnMArbSepolia.balanceOf(address(wallet)) > 0, true);
     }
-
-    // test brige
 
     function test_bridgeTokens() public {
         Register.NetworkDetails memory sepoliaNetworkDetails = ccipLocalSimulatorFork.getNetworkDetails(block.chainid);
         BurnMintERC677Helper ccipBnM = BurnMintERC677Helper(sepoliaNetworkDetails.ccipBnMAddress);
-        ccipBnM.drip(createdWalletAddress);
+        ccipBnM.drip(address(wallet));
 
         bytes memory bridgeCalldata =
             abi.encodeWithSelector(Wallet.bridge.selector, address(ccipBnM), 0.0001 ether, ARB_SEPOLIA_CHAIN_SELECTOR);
@@ -236,7 +183,7 @@ contract WalletFactoryTest is Test, Constants {
         bytes memory transactionCalldata =
             abi.encodeWithSelector(Wallet.execute.selector, address(wallet), 0, bridgeCalldata);
 
-        (UserOperation memory bridgeCalldataOp,) = _getUserOp(transactionCalldata, "", false);
+        (UserOperation memory bridgeCalldataOp,) = _getUserOp(transactionCalldata, "");
         _handleOp(bridgeCalldataOp);
 
         (address target, uint256 value, bytes memory data) = wallet.pausedTransactions(1);
@@ -250,7 +197,7 @@ contract WalletFactoryTest is Test, Constants {
         bytes memory approveTransactionCalldata =
             abi.encodeWithSelector(Wallet.approveTransaction.selector, nonce, abi.encodePacked(r, s, v));
 
-        (UserOperation memory approveTransactionOp,) = _getUserOp(approveTransactionCalldata, "", false);
+        (UserOperation memory approveTransactionOp,) = _getUserOp(approveTransactionCalldata, "");
         _handleOp(approveTransactionOp);
 
         ccipLocalSimulatorFork.switchChainAndRouteMessage(arbSepoliaFork);
@@ -259,7 +206,7 @@ contract WalletFactoryTest is Test, Constants {
             ccipLocalSimulatorFork.getNetworkDetails(block.chainid);
         BurnMintERC677Helper ccipBnMArbSepolia = BurnMintERC677Helper(arbSepoliaNetworkDetails.ccipBnMAddress);
 
-        assertEq(ccipBnMArbSepolia.balanceOf(createdWalletAddress) > 0, true);
+        assertEq(ccipBnMArbSepolia.balanceOf(address(wallet)) > 0, true);
     }
 
     // native tokens also get blocked
@@ -268,7 +215,7 @@ contract WalletFactoryTest is Test, Constants {
         bytes memory transactionCalldata =
             abi.encodeWithSelector(Wallet.execute.selector, address(guardian), 1 ether, "");
 
-        (UserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
+        (UserOperation memory userOp,) = _getUserOp(transactionCalldata, "");
         _handleOp(userOp);
         (address target, uint256 value, bytes memory data) = wallet.pausedTransactions(1);
         Transaction memory txn = Transaction(target, value, data);
@@ -281,7 +228,7 @@ contract WalletFactoryTest is Test, Constants {
         bytes memory approveTransactionCalldata =
             abi.encodeWithSelector(Wallet.approveTransaction.selector, nonce, abi.encodePacked(r, s, v));
 
-        (UserOperation memory approveTransactionOp,) = _getUserOp(approveTransactionCalldata, "", false);
+        (UserOperation memory approveTransactionOp,) = _getUserOp(approveTransactionCalldata, "");
         _handleOp(approveTransactionOp);
 
         uint256 balance = address(guardian).balance;
@@ -290,61 +237,71 @@ contract WalletFactoryTest is Test, Constants {
 
     // test paymaster
     function test_paymasterAndPoints() public {
-        bytes memory transferCalldata = abi.encodeWithSelector(ERC20.transfer.selector, guardian, 1e6);
+        bytes memory transferCalldata = abi.encodeWithSelector(ERC20.transfer.selector, guardian, 1);
         bytes memory transactionCalldata =
             abi.encodeWithSelector(Wallet.execute.selector, address(USDC), uint256(0), transferCalldata);
 
-        (UserOperation memory userOp,) = _getUserOp(transactionCalldata, "", false);
+        (UserOperation memory userOp,) = _getUserOp(transactionCalldata, "");
         _handleOp(userOp);
         transferCalldata = abi.encodeWithSelector(ERC20.transfer.selector, guardian, 1e6);
         transactionCalldata =
             abi.encodeWithSelector(Wallet.execute.selector, address(USDC), uint256(0), transferCalldata);
 
-        (userOp,) = _getUserOp(transactionCalldata, "", false);
+        (userOp,) = _getUserOp(transactionCalldata, "");
         _handleOp(userOp);
         transferCalldata = abi.encodeWithSelector(ERC20.transfer.selector, guardian, 1);
         transactionCalldata =
             abi.encodeWithSelector(Wallet.execute.selector, address(USDC), uint256(0), transferCalldata);
 
-        (userOp,) = _getUserOp(transactionCalldata, "", false);
-        bytes32 hash = pointsPaymaster.getHash(userOp, keccak256(abi.encodePacked(createdWalletAddress)));
+        (userOp,) = _getUserOp(transactionCalldata, "");
+        bytes32 hash = POINTS_PAYMASTER.getHash(userOp, keccak256(abi.encodePacked(address(wallet))));
 
         bytes32 digest = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
-        ENTRYPOINT.depositTo{value: 10 ether}(address(pointsPaymaster));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(deployerPrivateKey, digest);
+        ENTRYPOINT.depositTo{value: 10 ether}(address(POINTS_PAYMASTER));
         bytes memory paymasterAndData = abi.encodePacked(
-            address(pointsPaymaster),
-            uint128(1_000_000),
-            uint128(30_000),
-            abi.encodePacked(createdWalletAddress),
+            address(POINTS_PAYMASTER),
+            abi.encodePacked(address(wallet)),
             abi.encodePacked(r, s, v)
         );
-        (userOp,) = _getUserOp(transactionCalldata, paymasterAndData, false);
+        (userOp,) = _getUserOp(transactionCalldata, paymasterAndData);
 
-        vm.expectEmit(true, false, false, false, address(pointsPaymaster));
-        emit PointsPaymaster.PaymasterEvent(createdWalletAddress);
+        vm.expectEmit(true, false, false, false, address(POINTS_PAYMASTER));
+        emit PointsPaymaster.PaymasterEvent(address(wallet));
         _handleOp(userOp);
     }
 
-    // Internals
-    function _getUserOp(bytes memory callData, bytes memory paymasterAndData, bool isInitCode)
+    // HELPERS
+
+    function _getInitCode(uint256 maxAmountAllowedWithoutAuthUSD) internal returns (bytes memory, address) {
+        uint256 salt = 1;
+        bytes4 createAccountSelector = WALLET_FACTORY.createAccount.selector;
+
+        bytes memory createAccountData =
+            abi.encodeWithSelector(createAccountSelector, deployer, guardian, salt, maxAmountAllowedWithoutAuthUSD);
+
+        bytes memory initCode = abi.encodePacked(address(WALLET_FACTORY), createAccountData);
+
+        address walletContract = WALLET_FACTORY.getAddress(deployer, guardian, salt, maxAmountAllowedWithoutAuthUSD);
+        wallet = Wallet(payable(walletContract));
+        return (initCode, walletContract);
+    }
+
+    function _getUserOp(bytes memory callData, bytes memory paymasterAndData)
         internal
         returns (UserOperation memory, address)
     {
-        bytes memory initCode;
-        address walletAddress;
-        if (isInitCode) {
-            (initCode, walletAddress) = _getInitCode(2);
-        }
-        address walletContract = address(wallet);
-        vm.deal(walletContract, 10 ether);
-        ENTRYPOINT.depositTo{value: 10 ether}(walletContract);
+        (bytes memory initCode, address walletAddress) = _getInitCode(2);
+        bool needsInitCode = walletAddress.code.length == 0;
+
+        vm.deal(walletAddress, 10 ether);
+        ENTRYPOINT.depositTo{value: 10 ether}(walletAddress);
 
         UserOperation memory userOp = UserOperation({
-            sender: walletContract,
-            nonce: ENTRYPOINT.getNonce(walletContract, 0),
-            initCode: initCode,
+            sender: walletAddress,
+            nonce: ENTRYPOINT.getNonce(walletAddress, 0),
+            initCode: needsInitCode ? initCode : bytes(""),
             callData: callData,
             callGasLimit: 2_000_000,
             verificationGasLimit: 2_000_000,
@@ -357,8 +314,8 @@ contract WalletFactoryTest is Test, Constants {
 
         bytes32 userOpHash = ENTRYPOINT.getUserOpHash(userOp);
 
-        vm.startPrank(owner);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, userOpHash);
+        vm.startPrank(deployer);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(deployerPrivateKey, userOpHash);
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
 
@@ -366,25 +323,10 @@ contract WalletFactoryTest is Test, Constants {
         return (userOp, walletAddress);
     }
 
-    function _getInitCode(uint256 maxAmountAllowedWithoutAuthUSD) internal returns (bytes memory, address) {
-        uint256 salt = 1;
-        bytes4 createAccountSelector = walletFactory.createAccount.selector;
-
-        bytes memory createAccountData =
-            abi.encodeWithSelector(createAccountSelector, owner, guardian, salt, maxAmountAllowedWithoutAuthUSD);
-
-        bytes memory initCode = abi.encodePacked(address(walletFactory), createAccountData);
-
-        address walletContract = walletFactory.getAddress(owner, guardian, salt, maxAmountAllowedWithoutAuthUSD);
-        wallet = Wallet(payable(walletContract));
-
-        return (initCode, walletContract);
-    }
-
     function _handleOp(UserOperation memory userOp) internal {
         UserOperation[] memory ops = new UserOperation[](1);
         ops[0] = userOp;
 
-        ENTRYPOINT.handleOps(ops, payable(owner));
+        ENTRYPOINT.handleOps(ops, payable(deployer));
     }
 }

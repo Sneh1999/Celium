@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {BaseAccount} from "account-abstraction/core/BaseAccount.sol";
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
-import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
+import {UserOperation} from "account-abstraction/interfaces/UserOperation.sol";
 import {Initializable} from "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
@@ -62,7 +62,6 @@ contract Wallet is BaseAccount, Initializable {
     FeedsRegistry private immutable feedsRegistry;
     Consumer private immutable consumer;
     IRouterClient private immutable s_router;
-    // Permit2 private immutable permit2;
     IUniversalRouter private immutable universalRouter;
     address private immutable native;
     uint8 private immutable nativeTokenDecimals;
@@ -79,7 +78,6 @@ contract Wallet is BaseAccount, Initializable {
     address public guardian;
     uint256 public points;
     address zero;
-    uint64 immutable subscriptionId;
 
     mapping(uint256 nonce => Transaction txn) public pausedTransactions;
 
@@ -111,9 +109,8 @@ contract Wallet is BaseAccount, Initializable {
         address ourWalletFactory,
         address _feedsRegistry,
         address _consumer,
-        address _universalRouter,
-        address ccipRouter,
-        uint64 _subscriptionId,
+        IUniversalRouter _universalRouter,
+        IRouterClient ccipRouter,
         address _native,
         uint8 _nativeTokenDecimals,
         address _paymaster
@@ -121,10 +118,9 @@ contract Wallet is BaseAccount, Initializable {
         _entryPoint = anEntryPoint;
         _walletFactory = ourWalletFactory;
         consumer = Consumer(_consumer);
-        universalRouter = IUniversalRouter(_universalRouter);
-        s_router = IRouterClient(ccipRouter);
+        universalRouter = _universalRouter;
+        s_router = ccipRouter;
         feedsRegistry = FeedsRegistry(_feedsRegistry);
-        subscriptionId = _subscriptionId;
         native = _native;
         nativeTokenDecimals = _nativeTokenDecimals;
         paymaster = _paymaster;
@@ -281,11 +277,11 @@ contract Wallet is BaseAccount, Initializable {
 
         pausedTransactions[lastUsedPausedNonce] = Transaction({data: data, value: value, target: target});
 
-        consumer.sendRequest(subscriptionId, args);
+        consumer.sendRequest(args);
         return true;
     }
 
-    function _validateSignature(PackedUserOperation calldata userOp, bytes32 userOpHash)
+    function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash)
         internal
         view
         override
