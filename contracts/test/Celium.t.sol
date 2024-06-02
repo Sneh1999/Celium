@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
 import {UserOperation} from "account-abstraction/interfaces/UserOperation.sol";
 import {CeliumContractsMultichainStorage} from "../utils/CeliumContractsMultichainStorage.sol";
 import {CCIPLocalSimulatorFork} from "@chainlink/local/src/ccip/CCIPLocalSimulatorFork.sol";
 import {Wallet} from "../src/Wallet.sol";
-import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {BurnMintERC677Helper} from "@chainlink/local/src/ccip/CCIPLocalSimulator.sol";
 import {Register} from "@chainlink/local/src/ccip/Register.sol";
 import {PointsPaymaster} from "../src/PointsPaymaster.sol";
@@ -29,6 +29,8 @@ contract CeliumTest is Test, CeliumContractsMultichainStorage {
 
     uint64 ARB_SEPOLIA_CHAIN_SELECTOR = 3478487238524512106;
     uint256 arbSepoliaFork = vm.createFork("https://sepolia-rollup.arbitrum.io/rpc");
+
+event PaymasterEvent(address indexed wallet);
 
     function setUp() public {
         string memory forkRpcUrl = getForkURL("SEPOLIA");
@@ -260,15 +262,12 @@ contract CeliumTest is Test, CeliumContractsMultichainStorage {
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(deployerPrivateKey, digest);
         ENTRYPOINT.depositTo{value: 10 ether}(address(POINTS_PAYMASTER));
-        bytes memory paymasterAndData = abi.encodePacked(
-            address(POINTS_PAYMASTER),
-            abi.encodePacked(address(wallet)),
-            abi.encodePacked(r, s, v)
-        );
+        bytes memory paymasterAndData =
+            abi.encodePacked(address(POINTS_PAYMASTER), abi.encodePacked(address(wallet)), abi.encodePacked(r, s, v));
         (userOp,) = _getUserOp(transactionCalldata, paymasterAndData);
 
         vm.expectEmit(true, false, false, false, address(POINTS_PAYMASTER));
-        emit PointsPaymaster.PaymasterEvent(address(wallet));
+        emit PaymasterEvent(address(wallet));
         _handleOp(userOp);
     }
 

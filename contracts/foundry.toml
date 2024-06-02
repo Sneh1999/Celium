@@ -4,12 +4,6 @@ out = "out"
 test = "test"
 libs = ["lib"]
 fs_permissions = [{ access = "read", path = "./" }]
-solc = "0.8.25"
+solc = "0.8.19"
 evm_version = 'cancun'
 via_ir = true
-
-[rpc_endpoints]
-sepolia = "https://rpc.ankr.com/eth_sepolia"
-
-[etherscan]
-sepolia = { key = "${BLOCK_EXPLORER_API_KEY}" }

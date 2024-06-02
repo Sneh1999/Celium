@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {FeedsRegistry} from "../src/FeedsRegistry.sol";
@@ -9,7 +9,7 @@ import {IFunctionsRouter} from "chainlink/src/v0.8/functions/v1_0_0/interfaces/I
 import {Consumer} from "../src/Consumer.sol";
 import {WalletFactory} from "../src/WalletFactory.sol";
 import {PointsPaymaster} from "../src/PointsPaymaster.sol";
-import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {WETH9} from "@chainlink/local/src/shared/WETH9.sol";
 
 abstract contract CeliumContractsMultichainStorage {
@@ -59,11 +59,11 @@ abstract contract CeliumContractsMultichainStorage {
         } else if (keccak256(abi.encodePacked(selectedChain)) == keccak256(abi.encodePacked("ARBITRUM_SEPOLIA"))) {
             return "https://sepolia-rollup.arbitrum.io/rpc";
         } else if (keccak256(abi.encodePacked(selectedChain)) == keccak256(abi.encodePacked("AVALANCHE_FUJI"))) {
-            return "https://api.avax-test.network/ext/bc/C/rpc";
+            return "https://rpc.ankr.com/avalanche_fuji";
         } else if (keccak256(abi.encodePacked(selectedChain)) == keccak256(abi.encodePacked("SCROLL_SEPOLIA"))) {
-            return "https://api.sepolia.scroll.io/rpc";
+            return "https://rpc.ankr.com/scroll_sepolia_testnet";
         } else if (keccak256(abi.encodePacked(selectedChain)) == keccak256(abi.encodePacked("POLYGON_AMOY"))) {
-            return "";
+            return "https://rpc.ankr.com/polygon_amoy";
         }
 
         require(false, "Invalid selectedChain parameter");
@@ -86,16 +86,14 @@ abstract contract CeliumContractsMultichainStorage {
     }
 
     function deployOurContracts() internal {
-        address[] memory tokens = new address[](USD_PRICE_FEEDS.length);
-        address[] memory feeds = new address[](USD_PRICE_FEEDS.length);
-
-        for (uint256 i = 0; i < USD_PRICE_FEEDS.length; i++) {
-            USDPriceFeed memory usdPriceFeed = USD_PRICE_FEEDS[i];
-            tokens[i] = usdPriceFeed.tokenAddress;
-            feeds[i] = usdPriceFeed.priceFeed;
-        }
+        address[] memory tokens = new address[](0);
+        address[] memory feeds = new address[](0);
 
         FEEDS_REGISTRY = new FeedsRegistry(tokens, feeds);
+
+        for (uint256 i = 0; i < USD_PRICE_FEEDS.length; i++) {
+            FEEDS_REGISTRY.addFeed(USD_PRICE_FEEDS[i].tokenAddress, USD_PRICE_FEEDS[i].priceFeed);
+        }
 
         FUNCTIONS_CONSUMER = new Consumer(address(FUNCTIONS_ROUTER), CF_SUBSCRIPTION_ID, CF_DON_ID, CF_ENDPOINT);
         POINTS_PAYMASTER = new PointsPaymaster(ENTRYPOINT);

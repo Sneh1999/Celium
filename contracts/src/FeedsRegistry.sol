@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
-import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract FeedsRegistry is Ownable {
     mapping(address => address) public feeds;
@@ -9,7 +9,7 @@ contract FeedsRegistry is Ownable {
     event FeedAdded(address indexed token, address indexed feed);
     event FeedRemoved(address indexed token);
 
-    constructor(address[] memory tokens, address[] memory _feeds) Ownable(msg.sender) {
+    constructor(address[] memory tokens, address[] memory _feeds) Ownable() {
         // NOTE: this implementation is for testnet only as their is no FeedRegistry Contract deployed on testnets
         for (uint256 i = 0; i < tokens.length; i++) {
             feeds[tokens[i]] = _feeds[i];

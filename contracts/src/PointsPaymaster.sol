@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.0;
 
 import {BasePaymaster} from "account-abstraction/core/BasePaymaster.sol";
 import "../src/Wallet.sol";
 import {UserOperation} from "account-abstraction/interfaces/UserOperation.sol";
-import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "forge-std/console.sol";
 
 contract PointsPaymaster is BasePaymaster {
     using ECDSA for bytes32;
-    using MessageHashUtils for bytes32;
 
     event PaymasterEvent(address indexed wallet);
 
