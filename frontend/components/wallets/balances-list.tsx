@@ -14,6 +14,7 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { SendAction } from "../actions/send";
 import { BridgeAction } from "../actions/bridge";
+import { SwapAction } from "../actions/swap";
 
 interface WalletBalancesProps {
   wallet: NonNullable<
@@ -69,7 +70,7 @@ function BalanceItem({
         </Button>
         <div className="flex flex-col">
           <span className="font-bold text-lg">
-            {formatUnits(tokenInfo.balance, tokenInfo.decimals)}
+            {formatUnits(tokenInfo.balance, tokenInfo.decimals).substring(0, 6)}
           </span>
           <Link
             href={tokenInfo.isNative ? "#" : blockExplorerLink}
@@ -95,12 +96,9 @@ function BalanceItem({
       <div className="flex items-center gap-2 col-span-2">
         <SendAction tokenInfo={tokenInfo} wallet={wallet} />
 
-        <Button variant="pink" className="flex items-center gap-2">
-          Swap
-          <ArrowDownUpIcon className="h-4 w-4" />
-        </Button>
+        <SwapAction tokenInfo={tokenInfo} wallet={wallet} />
 
-        <BridgeAction tokenInfo={tokenInfo} wallet={wallet} />
+        {/* <BridgeAction tokenInfo={tokenInfo} wallet={wallet} /> */}
 
         <DepositAction tokenInfo={tokenInfo} wallet={wallet} />
       </div>

@@ -7,8 +7,56 @@ export const WalletFactoryABI = [
         type: "address",
         internalType: "contract IEntryPoint",
       },
+      {
+        name: "feedsRegistry",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "_consumer",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "_universalRouter",
+        type: "address",
+        internalType: "contract IUniversalRouter",
+      },
+      {
+        name: "ccipRouter",
+        type: "address",
+        internalType: "contract IRouterClient",
+      },
+      {
+        name: "_native",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "_nativeTokenDecimals",
+        type: "uint8",
+        internalType: "uint8",
+      },
+      {
+        name: "_paymaster",
+        type: "address",
+        internalType: "address",
+      },
     ],
     stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "consumer",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "contract Consumer",
+      },
+    ],
+    stateMutability: "view",
   },
   {
     type: "function",

@@ -71,6 +71,11 @@ const SepoliaTokens: TokenOnChain[] = [
     address: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
     isNative: false,
   },
+  {
+    ...CCIPBnM,
+    address: "0xFd57b4ddBf88a4e07fF4e34C487b99af2Fe82a05",
+    isNative: false,
+  },
 ];
 
 const ArbitrumSepoliaTokens: TokenOnChain[] = [
@@ -78,6 +83,11 @@ const ArbitrumSepoliaTokens: TokenOnChain[] = [
     ...ETH,
     address: "0x0000000000000000000000000000000000000000",
     isNative: true,
+  },
+  {
+    ...CCIPBnM,
+    address: "0xA8C0c11bf64AF62CDCA6f93D3769B88BdD7cb93D",
+    isNative: false,
   },
 ];
 
@@ -95,6 +105,11 @@ const AvalancheFujiTokens: TokenOnChain[] = [
     address: "0x0000000000000000000000000000000000000000",
     isNative: true,
   },
+  {
+    ...CCIPBnM,
+    address: "0xD21341536c5cF5EB1bcb58f6723cE26e8D8E90e4",
+    isNative: false,
+  },
 ];
 
 const PolygonAmoyTokens: TokenOnChain[] = [
@@ -102,6 +117,11 @@ const PolygonAmoyTokens: TokenOnChain[] = [
     ...MATIC,
     address: "0x0000000000000000000000000000000000000000",
     isNative: true,
+  },
+  {
+    ...CCIPBnM,
+    address: "0xcab0EF91Bee323d1A617c0a027eE753aFd6997E4",
+    isNative: false,
   },
 ];
 

@@ -23,8 +23,9 @@ export default async function handler(
     return;
   }
 
-  const { walletAddress, pausedNonce, walletNonce, chainId } =
-    req.body as Request2FARequest;
+  let { walletAddress, pausedNonce, walletNonce, chainId } = JSON.parse(
+    req.body as string
+  ) as Request2FARequest;
 
   const missing = [];
 
@@ -64,10 +65,12 @@ export default async function handler(
     return;
   }
 
+  const nonce = BigInt(walletNonce) - BigInt(1);
+
   const existingTransaction = await prisma.transaction.findFirst({
     where: {
       wallet: { address: walletAddress.toLowerCase() },
-      nonce: BigInt(walletNonce),
+      nonce,
     },
   });
 
@@ -82,6 +85,12 @@ export default async function handler(
       where: { id: existingTransaction.id },
       data: { isPaused: true, pausedNonce: BigInt(pausedNonce), twoFactorCode },
     });
+
+    await send2FARequestedEmail(
+      wallet.owner.email,
+      twoFactorCode,
+      `${process.env.NEXTAUTH_URL}/tx/${wallet.id}/${walletNonce}`
+    );
   }
 
   if (!existingTransaction) {
@@ -100,21 +109,36 @@ export default async function handler(
 
     const [target, value, data] = txnDetails;
 
-    await prisma.transaction.create({
-      data: {
+    await prisma.transaction.upsert({
+      where: {
+        walletId_nonce: {
+          walletId: wallet.id,
+          nonce: nonce,
+        },
+      },
+      create: {
         target: target.toLowerCase(),
         value: value,
         data: data,
-        nonce: BigInt(walletNonce),
+        nonce: nonce,
         pausedNonce: BigInt(pausedNonce),
         twoFactorCode,
         isPaused: true,
         wallet: { connect: { address: walletAddress.toLowerCase() } },
       },
+      update: {
+        isPaused: true,
+        twoFactorCode,
+        pausedNonce: BigInt(pausedNonce),
+      },
     });
-  }
 
-  await send2FARequestedEmail(wallet.owner.email, twoFactorCode, "TODO");
+    await send2FARequestedEmail(
+      wallet.owner.email,
+      twoFactorCode,
+      `${process.env.NEXTAUTH_URL}/tx/${wallet.id}/${walletNonce}`
+    );
+  }
 
   return res.json({ success: true });
 }

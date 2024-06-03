@@ -10,7 +10,7 @@ declare namespace NodeJS {
     EMAIL_USER: string;
     EMAIL_PASS: string;
 
-    GUARDIAN_PRIVATE_KEY: string;
+    GUARDIAN_PRIVATE_KEY: `0x${string}`;
     NEXT_PUBLIC_GUARDIAN_ADDRESS: `0x${string}`;
   }
 }

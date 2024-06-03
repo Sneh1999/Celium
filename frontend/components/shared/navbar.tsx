@@ -13,24 +13,6 @@ export function Navbar() {
           >
             Home
           </Link>
-          <Link
-            href="/transfer"
-            className="font-medium text-sm h-full border-b transition-all duration-300 border-transparent hover:border-muted-foreground"
-          >
-            Transfer
-          </Link>
-          <Link
-            href="/swap"
-            className="font-medium text-sm h-full border-b transition-all duration-300 border-transparent hover:border-muted-foreground"
-          >
-            Swap
-          </Link>
-          <Link
-            href="/bridge"
-            className="font-medium text-sm h-full border-b transition-all duration-300 border-transparent hover:border-muted-foreground"
-          >
-            CCIP Bridge
-          </Link>
         </div>
         <div className="flex-1 flex justify-end">
           <div className="flex items-center gap-4">

@@ -23,7 +23,7 @@ contract WalletFactory {
         address _native,
         uint8 _nativeTokenDecimals,
         address _paymaster
-    ) {
+    ) payable {
         walletImplementation = new Wallet(
             entryPoint,
             address(this),
@@ -36,6 +36,7 @@ contract WalletFactory {
             _paymaster
         );
         consumer = Consumer(_consumer);
+        entryPoint.addStake{value: msg.value}(10);
     }
 
     function createAccount(address owner, address guardian, uint256 salt, uint256 maxAmountAllowed)

@@ -48,6 +48,7 @@ abstract contract CeliumContractsMultichainStorage {
 
     // Our Parameters
     string CF_ENDPOINT = "https://celium-inky.vercel.app/api/request-2fa";
+    // string CF_ENDPOINT = "https://4e80-2607-fea8-a9a8-a900-689b-bae9-8cf9-a55b.ngrok-free.app/api/request-2fa";
 
     // Tests Only Parameters
     ERC20 USDC;
@@ -97,7 +98,7 @@ abstract contract CeliumContractsMultichainStorage {
 
         FUNCTIONS_CONSUMER = new Consumer(address(FUNCTIONS_ROUTER), CF_SUBSCRIPTION_ID, CF_DON_ID, CF_ENDPOINT);
         POINTS_PAYMASTER = new PointsPaymaster(ENTRYPOINT);
-        WALLET_FACTORY = new WalletFactory(
+        WALLET_FACTORY = new WalletFactory{value: 0.1 ether}(
             ENTRYPOINT,
             address(FEEDS_REGISTRY),
             address(FUNCTIONS_CONSUMER),

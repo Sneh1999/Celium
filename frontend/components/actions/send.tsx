@@ -43,7 +43,7 @@ export function SendAction({ tokenInfo, wallet }: ActionProps) {
         wallet,
         ownerAddress: session?.user.address as `0x${string}`,
         walletClient,
-        usePaymaster: false, // TODO
+        usePaymaster: false,
       });
 
       const amountInSmallestUnits = parseUnits(amount, tokenInfo.decimals);
@@ -80,12 +80,12 @@ export function SendAction({ tokenInfo, wallet }: ActionProps) {
       await trpcUtils.wallets.getWalletByAddress.refetch();
     } catch (e) {
       if (e instanceof Error) {
+        console.error(e.message);
         return toast.error("Failed to send", {
           description: e.message,
         });
       }
 
-      console.error(e);
       toast.error("Something went wrong", {
         description: "Unexpected error. Please try again later.",
       });

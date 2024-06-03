@@ -4,7 +4,13 @@ import type { AppProps } from "next/app";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
-import { sepolia } from "wagmi/chains";
+import {
+  sepolia,
+  arbitrumSepolia,
+  scrollSepolia,
+  avalancheFuji,
+  polygonAmoy,
+} from "wagmi/chains";
 import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { SessionProvider } from "next-auth/react";
 import { RootLayout } from "@/components/layout";
@@ -13,7 +19,7 @@ import { trpc } from "@/lib/trpc";
 const config = getDefaultConfig({
   appName: "Celium",
   projectId: "8e476f828ec6c1fc27351bf37e63bbe2",
-  chains: [sepolia],
+  chains: [sepolia, arbitrumSepolia, scrollSepolia, avalancheFuji, polygonAmoy],
   ssr: true,
 });
 

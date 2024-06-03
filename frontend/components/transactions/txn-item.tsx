@@ -1,5 +1,5 @@
 import { cn, getRelativeTimeString } from "@/lib/utils";
-import { ArrowRightLeft } from "lucide-react";
+import { ArrowRightLeft, ChevronRightIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -7,6 +7,7 @@ import { AppRouter } from "@/server/routers/_app";
 import { formatUnits } from "viem";
 import { TokensByChain } from "@/lib/tokens";
 import { getViemChainFromChainName } from "@/lib/chains";
+import { useRouter } from "next/router";
 
 interface TransactionItemProps {
   transaction: NonNullable<
@@ -17,12 +18,14 @@ interface TransactionItemProps {
 }
 
 export function TransactionItem({ transaction }: TransactionItemProps) {
+  const router = useRouter();
+
   const txnHash = transaction.hash;
   const from = transaction.wallet.address;
   const to = transaction.target;
 
   const viemChain = getViemChainFromChainName(transaction.wallet.chain);
-  const blockExplorerLink = `${viemChain.blockExplorers?.default.url}/address`;
+  const blockExplorerLink = `${viemChain.blockExplorers?.default.url}`;
 
   const tokenInfo = TokensByChain[transaction.wallet.chain].find(
     (tokenInfo) => tokenInfo.isNative === true
@@ -32,15 +35,27 @@ export function TransactionItem({ transaction }: TransactionItemProps) {
   const amount = formatUnits(transaction.value, decimals);
 
   return (
-    <div className={cn("flex py-4 items-center text-sm justify-between")}>
+    <div
+      className={cn(
+        "flex py-4 items-center text-sm justify-between transition-all hover:bg-muted px-2 rounded-md"
+      )}
+      onClick={() => {
+        router.push(`/tx/${transaction.walletId}/${transaction.nonce}`);
+      }}
+    >
       <div className="flex items-center gap-2">
         <Button size="icon" variant="outline">
           <ArrowRightLeft className="h-5 w-5" />
         </Button>
         <div className="flex flex-col gap-1">
-          <Link href={"#"} target="_blank" className="text-blue-400">
+          <Link
+            href={`${blockExplorerLink}/tx/${txnHash}`}
+            target="_blank"
+            className="text-blue-400"
+            onClick={(e) => e.stopPropagation()}
+          >
             {txnHash
-              ? `${txnHash.substring(0, 6)}...${txnHash.substring(38)}`
+              ? `${txnHash.substring(0, 6)}...${txnHash.substring(58)}`
               : "-"}
           </Link>
           <span>{getRelativeTimeString(transaction.createdAt)}</span>
@@ -51,7 +66,7 @@ export function TransactionItem({ transaction }: TransactionItemProps) {
         <div className="flex items-center gap-1">
           <span>From: </span>
           <Link
-            href={`${blockExplorerLink}/${from}`}
+            href={`${blockExplorerLink}/address/${from}`}
             target="_blank"
             className="text-blue-400"
           >
@@ -61,7 +76,7 @@ export function TransactionItem({ transaction }: TransactionItemProps) {
         <div className="flex items-center gap-1">
           <span>To: </span>
           <Link
-            href={`${blockExplorerLink}/${to}`}
+            href={`${blockExplorerLink}/address/${to}`}
             target="_blank"
             className="text-blue-400"
           >
@@ -99,6 +114,10 @@ export function TransactionItem({ transaction }: TransactionItemProps) {
               : "Cancelled"}
           </Badge>
         </div>
+      </div>
+
+      <div className="flex items-center justify-center">
+        <ChevronRightIcon className="h-4 w-4" />
       </div>
     </div>
   );

@@ -29,12 +29,13 @@ export async function getAccountInstance(opts: GetAccountInstanceOpts) {
     bundlerClient: getBundlerPublicClientFromChainName(opts.wallet.chain),
     entryPointAddress:
       ContractAddressesByChain[opts.wallet.chain].entrypointAddress,
+    salt: BigInt(opts.wallet.salt),
     setFactoryData: async (_salt, encoder) => {
       return encoder("createAccount", [
         opts.ownerAddress,
         ContractAddressesByChain[opts.wallet.chain].guardianAddress,
         BigInt(opts.wallet.salt),
-        BigInt(opts.wallet.maxUSDAmountAllowed), // TODO: MAX AMOUNT ALLOWED
+        BigInt(opts.wallet.maxUSDAmountAllowed),
       ]);
     },
     requestSignature: async (type, message) => {
@@ -43,27 +44,23 @@ export async function getAccountInstance(opts: GetAccountInstanceOpts) {
         return dummy.signMessage({ message });
       }
 
+      await opts.walletClient.switchChain({
+        id: getViemChainFromChainName(opts.wallet.chain).id,
+      });
+
       return await opts.walletClient.signMessage({
         account: opts.ownerAddress,
-        message,
+        message: { raw: message },
       });
     },
-    requestPaymaster: async (userOp, entrypoint) => {
-      if (!opts.usePaymaster) {
-        return {
-          paymasterAndData: "0x",
-        };
-      }
-
-      // TODO: ADD PAYMASTER
-
-      return {
-        paymasterAndData: "0x",
-      };
-    },
+    requestPaymaster: opts.usePaymaster
+      ? async (userOp, entrypoint) => {
+          return {
+            paymasterAndData: "0x",
+          };
+        }
+      : undefined,
   });
-
-  account.setSalt(BigInt(opts.wallet.salt));
 
   return account;
 }

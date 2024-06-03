@@ -23,6 +23,9 @@ const BUNDLER_CLIENTS = {
   [Chain.SEPOLIA]: createPublicClient({
     chain: sepolia,
     transport: http("https://public.stackup.sh/api/v1/node/ethereum-sepolia"),
+    // transport: http(
+    //   "https://api.stackup.sh/v1/node/13bb5259710aa7341159c50379e28857c8483065a1113456bbc91e807d02e236"
+    // ),
   }),
   [Chain.ARBITRUM_SEPOLIA]: createPublicClient({
     chain: arbitrumSepolia,
@@ -58,32 +61,44 @@ export const ChainData: {
   chain: Chain;
   fullName: string;
   imageUrl: string;
+  nativeToken: string;
+  chainSelector: string;
 }[] = [
   {
     chain: Chain.SEPOLIA,
     fullName: "Sepolia",
     imageUrl:
       "https://cryptologos.cc/logos/versions/ethereum-eth-logo-diamond.svg?v=032",
+    nativeToken: "ETH",
+    chainSelector: "16015286601757825753",
   },
   {
     chain: Chain.ARBITRUM_SEPOLIA,
     fullName: "Arbitrum Sepolia",
     imageUrl: "https://cryptologos.cc/logos/arbitrum-arb-logo.svg?v=032",
+    nativeToken: "ETH",
+    chainSelector: "3478487238524512106",
   },
   {
     chain: Chain.AVALANCHE_FUJI,
     fullName: "Avalanche Fuji",
     imageUrl: "https://cryptologos.cc/logos/avalanche-avax-logo.svg?v=032",
+    nativeToken: "AVAX",
+    chainSelector: "14767482510784806043",
   },
   {
     chain: Chain.SCROLL_SEPOLIA,
     fullName: "Scroll Sepolia",
     imageUrl:
       "https://pbs.twimg.com/profile_images/1696531511519150080/Fq5O0LeN_400x400.jpg",
+    nativeToken: "ETH",
+    chainSelector: "",
   },
   {
     chain: Chain.POLYGON_AMOY,
     fullName: "Polygon Amoy",
     imageUrl: "https://cryptologos.cc/logos/polygon-matic-logo.svg?v=032",
+    nativeToken: "MATIC",
+    chainSelector: "16281711391670634445",
   },
 ];

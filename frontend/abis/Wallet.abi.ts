@@ -25,17 +25,12 @@ export const WalletABI = [
       {
         name: "_universalRouter",
         type: "address",
-        internalType: "address",
+        internalType: "contract IUniversalRouter",
       },
       {
         name: "ccipRouter",
         type: "address",
-        internalType: "address",
-      },
-      {
-        name: "_subscriptionId",
-        type: "uint64",
-        internalType: "uint64",
+        internalType: "contract IRouterClient",
       },
       {
         name: "_native",
@@ -46,6 +41,11 @@ export const WalletABI = [
         name: "_nativeTokenDecimals",
         type: "uint8",
         internalType: "uint8",
+      },
+      {
+        name: "_paymaster",
+        type: "address",
+        internalType: "address",
       },
     ],
     stateMutability: "nonpayable",
@@ -106,6 +106,19 @@ export const WalletABI = [
         internalType: "bytes32",
       },
     ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "burnPoints",
+    inputs: [
+      {
+        name: "_points",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    outputs: [],
     stateMutability: "nonpayable",
   },
   {
@@ -237,6 +250,19 @@ export const WalletABI = [
   },
   {
     type: "function",
+    name: "points",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "swapAndBridge",
     inputs: [
       {
@@ -286,7 +312,7 @@ export const WalletABI = [
       {
         name: "userOp",
         type: "tuple",
-        internalType: "struct PackedUserOperation",
+        internalType: "struct UserOperation",
         components: [
           {
             name: "sender",
@@ -309,9 +335,14 @@ export const WalletABI = [
             internalType: "bytes",
           },
           {
-            name: "accountGasLimits",
-            type: "bytes32",
-            internalType: "bytes32",
+            name: "callGasLimit",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "verificationGasLimit",
+            type: "uint256",
+            internalType: "uint256",
           },
           {
             name: "preVerificationGas",
@@ -319,9 +350,14 @@ export const WalletABI = [
             internalType: "uint256",
           },
           {
-            name: "gasFees",
-            type: "bytes32",
-            internalType: "bytes32",
+            name: "maxFeePerGas",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "maxPriorityFeePerGas",
+            type: "uint256",
+            internalType: "uint256",
           },
           {
             name: "paymasterAndData",
@@ -387,9 +423,9 @@ export const WalletABI = [
     inputs: [
       {
         name: "version",
-        type: "uint64",
+        type: "uint8",
         indexed: false,
-        internalType: "uint64",
+        internalType: "uint8",
       },
     ],
     anonymous: false,
@@ -489,39 +525,7 @@ export const WalletABI = [
   },
   {
     type: "error",
-    name: "ECDSAInvalidSignature",
-    inputs: [],
-  },
-  {
-    type: "error",
-    name: "ECDSAInvalidSignatureLength",
-    inputs: [
-      {
-        name: "length",
-        type: "uint256",
-        internalType: "uint256",
-      },
-    ],
-  },
-  {
-    type: "error",
-    name: "ECDSAInvalidSignatureS",
-    inputs: [
-      {
-        name: "s",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
-    ],
-  },
-  {
-    type: "error",
     name: "GuardianSignatureVerificationFailed",
-    inputs: [],
-  },
-  {
-    type: "error",
-    name: "InvalidInitialization",
     inputs: [],
   },
   {
@@ -557,28 +561,12 @@ export const WalletABI = [
   },
   {
     type: "error",
-    name: "NotInitializing",
+    name: "NotPaymaster",
     inputs: [],
   },
   {
     type: "error",
     name: "NotSelf",
     inputs: [],
-  },
-  {
-    type: "error",
-    name: "StringsInsufficientHexLength",
-    inputs: [
-      {
-        name: "value",
-        type: "uint256",
-        internalType: "uint256",
-      },
-      {
-        name: "length",
-        type: "uint256",
-        internalType: "uint256",
-      },
-    ],
   },
 ] as const;

@@ -23,4 +23,12 @@ export async function send2FARequestedEmail(
   email: string,
   twoFactorCode: string,
   approvalLink: string
-) {}
+) {
+  await mailTransport.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: "Celium - 2FA Requested",
+    text: `Your two factor code is ${twoFactorCode}. Please click on the link below to approve your request.`,
+    html: `<p>Your two factor code is <b>${twoFactorCode}</b>. Please click on the link below to approve your request.</p><a href="${approvalLink}">Approve</a>`,
+  });
+}

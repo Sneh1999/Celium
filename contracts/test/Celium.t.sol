@@ -30,7 +30,7 @@ contract CeliumTest is Test, CeliumContractsMultichainStorage {
     uint64 ARB_SEPOLIA_CHAIN_SELECTOR = 3478487238524512106;
     uint256 arbSepoliaFork = vm.createFork("https://sepolia-rollup.arbitrum.io/rpc");
 
-event PaymasterEvent(address indexed wallet);
+    event PaymasterEvent(address indexed wallet);
 
     function setUp() public {
         string memory forkRpcUrl = getForkURL("SEPOLIA");
@@ -259,7 +259,6 @@ event PaymasterEvent(address indexed wallet);
         bytes32 hash = POINTS_PAYMASTER.getHash(userOp, keccak256(abi.encodePacked(address(wallet))));
 
         bytes32 digest = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
-
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(deployerPrivateKey, digest);
         ENTRYPOINT.depositTo{value: 10 ether}(address(POINTS_PAYMASTER));
         bytes memory paymasterAndData =
@@ -314,7 +313,8 @@ event PaymasterEvent(address indexed wallet);
         bytes32 userOpHash = ENTRYPOINT.getUserOpHash(userOp);
 
         vm.startPrank(deployer);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(deployerPrivateKey, userOpHash);
+        bytes32 digest = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", userOpHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(deployerPrivateKey, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
 

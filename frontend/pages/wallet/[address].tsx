@@ -9,6 +9,8 @@ import SuperJSON from "superjson";
 import { getAuthOptions } from "../api/auth/[...nextauth]";
 import { WalletBalances } from "@/components/wallets/balances-list";
 import { TransactionsList } from "@/components/transactions/txns-list";
+import { CopyIcon } from "lucide-react";
+import { toast } from "sonner";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await getServerSession(
@@ -77,7 +79,7 @@ export default function WalletPage({
   const txnsRes = trpc.transactions.getUserTransactionsByWallet.useQuery({
     walletAddress: address,
   });
-
+  // TODO: SHOW PREFUND GAS
   if (!address) return null;
   if (!walletRes.data) return null;
   if (!txnsRes.data) return null;
@@ -95,6 +97,13 @@ export default function WalletPage({
             className="h-8 w-8"
           />
           <h1 className="text-3xl font-bold">{wallet.name}</h1>
+          <CopyIcon
+            className="h-8 w-8 ml-2 hover:text-muted-foreground"
+            onClick={() => {
+              window.navigator.clipboard.writeText(wallet.address);
+              toast.success("Copied to clipboard");
+            }}
+          />
         </div>
 
         <h1 className="text-3xl font-bold text-muted-foreground px-2 py-1 bg-muted rounded-md">
