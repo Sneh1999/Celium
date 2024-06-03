@@ -33,7 +33,9 @@ const BUNDLER_CLIENTS = {
   }),
   [Chain.AVALANCHE_FUJI]: createPublicClient({
     chain: avalancheFuji,
-    transport: http("https://public.stackup.sh/api/v1/node/avalanche-fuji"),
+    transport: http(
+      "https://api.stackup.sh/v1/node/bbd268da9cbe89c66aa561126bd1425bb75b06c836f5047d3f7376b7d4a86ec8"
+    ),
   }),
   [Chain.SCROLL_SEPOLIA]: createPublicClient({
     chain: scrollSepolia,
